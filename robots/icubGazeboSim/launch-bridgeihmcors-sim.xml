@@ -1,0 +1,63 @@
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<robot name="icubGazeboSim">
+    <!-- controlboards -->
+    <device name="torso_mc" type="remote_controlboard">
+        <param name="remote"> /icubSim/torso </param>
+        <param name="local"> /bridgeIHMCORS/torso </param>
+    </device>
+
+    <device name="left_arm_mc" type="remote_controlboard">
+        <param name="remote"> /icubSim/left_arm </param>
+        <param name="local"> /bridgeIHMCORS/left_arm </param>
+    </device>
+
+    <device name="right_arm_mc" type="remote_controlboard">
+        <param name="remote"> /icubSim/right_arm </param>
+        <param name="local"> /bridgeIHMCORS/right_arm </param>
+    </device>
+
+    <device name="left_leg_mc" type="remote_controlboard">
+        <param name="remote"> /icubSim/left_leg </param>
+        <param name="local"> /bridgeIHMCORS/left_leg </param>
+    </device>
+
+    <device name="right_leg_mc" type="remote_controlboard">
+        <param name="remote"> /icubSim/right_leg </param>
+        <param name="local"> /bridgeIHMCORS/right_leg </param>
+    </device>
+
+    <device name="head_mc" type="remote_controlboard">
+        <param name="remote"> /icubSim/head </param>
+        <param name="local"> /bridgeIHMCORS/head </param>
+    </device>
+
+    <!-- Remapper device that selects a given set of joints -->
+    <device name="ihmc_remapped_controlboard" type="controlboardremapper">
+         <param name="axesNames">(torso_pitch,torso_roll,torso_yaw,l_shoulder_pitch,l_shoulder_roll,l_shoulder_yaw,l_elbow,r_shoulder_pitch,r_shoulder_roll,r_shoulder_yaw,r_elbow,l_hip_pitch,l_hip_roll,l_hip_yaw,l_knee,l_ankle_pitch,l_ankle_roll,r_hip_pitch,r_hip_roll,r_hip_yaw,r_knee,r_ankle_pitch,r_ankle_roll)</param>
+
+         <action phase="startup" level="10" type="attach">
+            <paramlist name="networks">
+                <!-- motorcontrol and virtual torque sensors -->
+                <elem name="left_leg">left_leg_mc</elem>
+                <elem name="right_leg">right_leg_mc</elem>
+                <elem name="left_arm">left_arm_mc</elem>
+                <elem name="right_arm">right_arm_mc</elem>
+                <elem name="torso">torso_mc</elem>
+            </paramlist>
+         </action>
+    </device>
+
+    <!-- actual bridgeIHMCORS device -->
+    <device name="ihmc_bridge" type="bridgeIHMCORS">
+         <param name="period">0.005</param>
+
+         <action phase="startup" level="20" type="attach">
+            <paramlist name="networks">
+                <!-- motorcontrol  -->
+                <elem name="ihmc_remapped_controlboard">ihmc_remapped_controlboard</elem>
+            </paramlist>
+         </action>
+    </device>
+
+</robot>
