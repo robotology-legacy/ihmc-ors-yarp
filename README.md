@@ -32,7 +32,7 @@ make
 ### Configure your system
 To make sure that the `bridgeIHMCORS` YARP device is found, add the `<install_prefix>` that you choose to the `YARP_DATA_DIRS` env variable.
 
-## Usege
+## Usage
 
 ### iCub
 
