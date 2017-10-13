@@ -1,6 +1,8 @@
 // Copyright: (C) 2017 iCub Facility, Istituto Italiano di Tecnologia
 // Copy Policy: Released under the terms of the LGPLv2.1 or later, see LGPL.TXT
 
+#include "BridgeIHMCORS.h"
+
 #include <yarp/os/LockGuard.h>
 #include <yarp/os/LogStream.h>
 #include <yarp/os/Property.h>
@@ -11,24 +13,22 @@
 #include <climits>
 #include <cmath>
 
-#include "bridgeIHMCORS.h"
-
 namespace yarp
 {
 namespace dev
 {
 
-bridgeIHMCORS::bridgeIHMCORS(): os::RateThread(5)
+BridgeIHMCORS::BridgeIHMCORS(): os::RateThread(5)
 {
     resetInterfaces();
 }
 
-bridgeIHMCORS::~bridgeIHMCORS()
+BridgeIHMCORS::~BridgeIHMCORS()
 {
 
 }
 
-bool bridgeIHMCORS::open(yarp::os::Searchable& config)
+bool BridgeIHMCORS::open(yarp::os::Searchable& config)
 {
     double periodInSeconds=config.check("period",os::Value(0.005)).asDouble();
     int period_ms=int(1000.0*periodInSeconds);
@@ -37,7 +37,7 @@ bool bridgeIHMCORS::open(yarp::os::Searchable& config)
 }
 
 
-bool bridgeIHMCORS::attachAll(const PolyDriverList& p)
+bool BridgeIHMCORS::attachAll(const PolyDriverList& p)
 {
     yarp::os::LockGuard guard(m_deviceMutex);
 
@@ -57,7 +57,7 @@ bool bridgeIHMCORS::attachAll(const PolyDriverList& p)
     return ok;
 }
 
-bool bridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
+bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
 {
     bool foundDevice = false;
     
@@ -99,6 +99,7 @@ bool bridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             m_desiredTorques.resize(nj);
 
             foundDevice = ok;
+            break; // see assumption
         }
     }
 
@@ -123,7 +124,7 @@ double rad2deg(const double angleInRad)
 }
 
 
-void bridgeIHMCORS::run()
+void BridgeIHMCORS::run()
 {
     yarp::os::LockGuard guard(m_deviceMutex);
 
@@ -151,6 +152,8 @@ void bridgeIHMCORS::run()
 
                 // std::cerr << "m_robotFeedback message updated " << std::endl;
             }
+
+
         }
         else
         {
@@ -159,7 +162,7 @@ void bridgeIHMCORS::run()
     }
 }
 
-bool bridgeIHMCORS::detachAll()
+bool BridgeIHMCORS::detachAll()
 {
     yarp::os::LockGuard guard(m_deviceMutex);
 
@@ -175,11 +178,11 @@ bool bridgeIHMCORS::detachAll()
     return true;
 }
 
-bool bridgeIHMCORS::close()
+bool BridgeIHMCORS::close()
 {
 }
 
-void bridgeIHMCORS::resetInterfaces()
+void BridgeIHMCORS::resetInterfaces()
 {
     m_correctlyConfigured = false;
     m_wholeBodyControlBoardInterfaces.encs = nullptr;
@@ -187,7 +190,7 @@ void bridgeIHMCORS::resetInterfaces()
     m_wholeBodyControlBoardInterfaces.axis = nullptr;
 }
 
-void bridgeIHMCORS::onDesiredMessageReceived(const it::iit::yarp::RobotDesireds& receivedRobotDesired)
+void BridgeIHMCORS::onDesiredMessageReceived(const it::iit::yarp::RobotDesireds& receivedRobotDesired)
 {
     if (receivedRobotDesired.jointDesireds().size() != m_jointTypes.size())
     {

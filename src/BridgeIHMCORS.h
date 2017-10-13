@@ -35,7 +35,7 @@ namespace dev {
  * |:--------------:|:--------------:|:-----------------:|:-----:|:-------------:|:--------:|:-----------------------------------------------------------------:|:-----:|
  * | period         |      -         | double            |   s   | 0.005         | No       | Period at which the feedback collected by the robot devices is sent to the  IHMC-ORS controller | |
  */
-class bridgeIHMCORS :  public yarp::dev::DeviceDriver,
+class BridgeIHMCORS :  public yarp::dev::DeviceDriver,
                        public yarp::dev::IMultipleWrapper,
                        public yarp::os::RateThread
 {
@@ -62,7 +62,7 @@ private:
     std::vector<double> m_jointVelocitiesFromYARP;
     
     // FastRTPS robot feedback message 
-    it::iit::yarp::robotFeedback m_robotFeedback;
+    it::iit::yarp::RobotFeedback m_robotFeedback;
 
     // Function to call when a new desired message has been received
     // TODO(traversaro): make sure that this function is called
@@ -73,8 +73,8 @@ private:
     
 public:
     // CONSTRUCTOR
-    bridgeIHMCORS();
-    ~bridgeIHMCORS();
+    BridgeIHMCORS();
+    ~BridgeIHMCORS();
 
     // DEVICE DRIVER
     virtual bool open(yarp::os::Searchable& config);
