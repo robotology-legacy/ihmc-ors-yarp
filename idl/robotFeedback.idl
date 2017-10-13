@@ -4,7 +4,7 @@ module it
     {
         module yarp
         {
-            struct jointState
+            struct JointState
             {
                 double tau;
                 double q;
@@ -36,13 +36,13 @@ module it
                 double tauZ;
             };
 
-            struct robotFeedback
+            struct RobotFeedback
             {
                 long long timestampInNanoseconds;
                 
                 // Optional fields like battery, voltage level etc etc etc 
 
-                sequence<jointState> jointStates;       // List of states. Joint order agreed beforehand and hard coded in first version
+                sequence<JointState> jointStates;       // List of states. Joint order agreed beforehand and hard coded in first version
                 sequence<IMUState> imuStates;           // List of states. IMU order agreed beforehand and hard coded in first version
                 sequence<ForceSensor> forceSensors;     // List of states. Force sensor order agreed beforehand and hard coded in first version
             };
