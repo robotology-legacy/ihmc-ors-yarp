@@ -31,20 +31,20 @@ namespace it
     {
         namespace yarp
         {
-            jointStatePubSubType::jointStatePubSubType() {
-                setName("it::iit::yarp::jointState");
-                m_typeSize = (uint32_t)jointState::getMaxCdrSerializedSize() + 4 /*encapsulation*/;
-                m_isGetKeyDefined = jointState::isKeyDefined();
-                m_keyBuffer = (unsigned char*)malloc(jointState::getKeyMaxCdrSerializedSize()>16 ? jointState::getKeyMaxCdrSerializedSize() : 16);
+            JointStatePubSubType::JointStatePubSubType() {
+                setName("it::iit::yarp::JointState");
+                m_typeSize = (uint32_t)JointState::getMaxCdrSerializedSize() + 4 /*encapsulation*/;
+                m_isGetKeyDefined = JointState::isKeyDefined();
+                m_keyBuffer = (unsigned char*)malloc(JointState::getKeyMaxCdrSerializedSize()>16 ? JointState::getKeyMaxCdrSerializedSize() : 16);
             }
 
-            jointStatePubSubType::~jointStatePubSubType() {
+            JointStatePubSubType::~JointStatePubSubType() {
                 if(m_keyBuffer!=nullptr)
                     free(m_keyBuffer);
             }
 
-            bool jointStatePubSubType::serialize(void *data, SerializedPayload_t *payload) {
-                jointState *p_type = (jointState*) data;
+            bool JointStatePubSubType::serialize(void *data, SerializedPayload_t *payload) {
+                JointState *p_type = (JointState*) data;
                 eprosima::fastcdr::FastBuffer fastbuffer((char*) payload->data, payload->max_size); // Object that manages the raw buffer.
                 eprosima::fastcdr::Cdr ser(fastbuffer, eprosima::fastcdr::Cdr::DEFAULT_ENDIAN,
                         eprosima::fastcdr::Cdr::DDS_CDR); // Object that serializes the data.
@@ -65,8 +65,8 @@ namespace it
                 return true;
             }
 
-            bool jointStatePubSubType::deserialize(SerializedPayload_t* payload, void* data) {
-                jointState* p_type = (jointState*) data; 	//Convert DATA to pointer of your type
+            bool JointStatePubSubType::deserialize(SerializedPayload_t* payload, void* data) {
+                JointState* p_type = (JointState*) data; 	//Convert DATA to pointer of your type
                 eprosima::fastcdr::FastBuffer fastbuffer((char*)payload->data, payload->length); // Object that manages the raw buffer.
                 eprosima::fastcdr::Cdr deser(fastbuffer, eprosima::fastcdr::Cdr::DEFAULT_ENDIAN,
                         eprosima::fastcdr::Cdr::DDS_CDR); // Object that deserializes the data.
@@ -86,29 +86,29 @@ namespace it
                 return true;
             }
 
-            std::function<uint32_t()> jointStatePubSubType::getSerializedSizeProvider(void* data) {
+            std::function<uint32_t()> JointStatePubSubType::getSerializedSizeProvider(void* data) {
                 return [data]() -> uint32_t
                 {
-                    return (uint32_t)type::getCdrSerializedSize(*static_cast<jointState*>(data)) + 4 /*encapsulation*/;
+                    return (uint32_t)type::getCdrSerializedSize(*static_cast<JointState*>(data)) + 4 /*encapsulation*/;
                 };
             }
 
-            void* jointStatePubSubType::createData() {
-                return (void*)new jointState();
+            void* JointStatePubSubType::createData() {
+                return (void*)new JointState();
             }
 
-            void jointStatePubSubType::deleteData(void* data) {
-                delete((jointState*)data);
+            void JointStatePubSubType::deleteData(void* data) {
+                delete((JointState*)data);
             }
 
-            bool jointStatePubSubType::getKey(void *data, InstanceHandle_t* handle) {
+            bool JointStatePubSubType::getKey(void *data, InstanceHandle_t* handle) {
                 if(!m_isGetKeyDefined)
                     return false;
-                jointState* p_type = (jointState*) data;
-                eprosima::fastcdr::FastBuffer fastbuffer((char*)m_keyBuffer,jointState::getKeyMaxCdrSerializedSize()); 	// Object that manages the raw buffer.
+                JointState* p_type = (JointState*) data;
+                eprosima::fastcdr::FastBuffer fastbuffer((char*)m_keyBuffer,JointState::getKeyMaxCdrSerializedSize()); 	// Object that manages the raw buffer.
                 eprosima::fastcdr::Cdr ser(fastbuffer, eprosima::fastcdr::Cdr::BIG_ENDIANNESS); 	// Object that serializes the data.
                 p_type->serializeKey(ser);
-                if(jointState::getKeyMaxCdrSerializedSize()>16)	{
+                if(JointState::getKeyMaxCdrSerializedSize()>16)	{
                     m_md5.init();
                     m_md5.update(m_keyBuffer,(unsigned int)ser.getSerializedDataLength());
                     m_md5.finalize();
@@ -310,20 +310,20 @@ namespace it
                 return true;
             }
 
-            robotFeedbackPubSubType::robotFeedbackPubSubType() {
-                setName("it::iit::yarp::robotFeedback");
-                m_typeSize = (uint32_t)robotFeedback::getMaxCdrSerializedSize() + 4 /*encapsulation*/;
-                m_isGetKeyDefined = robotFeedback::isKeyDefined();
-                m_keyBuffer = (unsigned char*)malloc(robotFeedback::getKeyMaxCdrSerializedSize()>16 ? robotFeedback::getKeyMaxCdrSerializedSize() : 16);
+            RobotFeedbackPubSubType::RobotFeedbackPubSubType() {
+                setName("it::iit::yarp::RobotFeedback");
+                m_typeSize = (uint32_t)RobotFeedback::getMaxCdrSerializedSize() + 4 /*encapsulation*/;
+                m_isGetKeyDefined = RobotFeedback::isKeyDefined();
+                m_keyBuffer = (unsigned char*)malloc(RobotFeedback::getKeyMaxCdrSerializedSize()>16 ? RobotFeedback::getKeyMaxCdrSerializedSize() : 16);
             }
 
-            robotFeedbackPubSubType::~robotFeedbackPubSubType() {
+            RobotFeedbackPubSubType::~RobotFeedbackPubSubType() {
                 if(m_keyBuffer!=nullptr)
                     free(m_keyBuffer);
             }
 
-            bool robotFeedbackPubSubType::serialize(void *data, SerializedPayload_t *payload) {
-                robotFeedback *p_type = (robotFeedback*) data;
+            bool RobotFeedbackPubSubType::serialize(void *data, SerializedPayload_t *payload) {
+                RobotFeedback *p_type = (RobotFeedback*) data;
                 eprosima::fastcdr::FastBuffer fastbuffer((char*) payload->data, payload->max_size); // Object that manages the raw buffer.
                 eprosima::fastcdr::Cdr ser(fastbuffer, eprosima::fastcdr::Cdr::DEFAULT_ENDIAN,
                         eprosima::fastcdr::Cdr::DDS_CDR); // Object that serializes the data.
@@ -344,8 +344,8 @@ namespace it
                 return true;
             }
 
-            bool robotFeedbackPubSubType::deserialize(SerializedPayload_t* payload, void* data) {
-                robotFeedback* p_type = (robotFeedback*) data; 	//Convert DATA to pointer of your type
+            bool RobotFeedbackPubSubType::deserialize(SerializedPayload_t* payload, void* data) {
+                RobotFeedback* p_type = (RobotFeedback*) data; 	//Convert DATA to pointer of your type
                 eprosima::fastcdr::FastBuffer fastbuffer((char*)payload->data, payload->length); // Object that manages the raw buffer.
                 eprosima::fastcdr::Cdr deser(fastbuffer, eprosima::fastcdr::Cdr::DEFAULT_ENDIAN,
                         eprosima::fastcdr::Cdr::DDS_CDR); // Object that deserializes the data.
@@ -365,29 +365,29 @@ namespace it
                 return true;
             }
 
-            std::function<uint32_t()> robotFeedbackPubSubType::getSerializedSizeProvider(void* data) {
+            std::function<uint32_t()> RobotFeedbackPubSubType::getSerializedSizeProvider(void* data) {
                 return [data]() -> uint32_t
                 {
-                    return (uint32_t)type::getCdrSerializedSize(*static_cast<robotFeedback*>(data)) + 4 /*encapsulation*/;
+                    return (uint32_t)type::getCdrSerializedSize(*static_cast<RobotFeedback*>(data)) + 4 /*encapsulation*/;
                 };
             }
 
-            void* robotFeedbackPubSubType::createData() {
-                return (void*)new robotFeedback();
+            void* RobotFeedbackPubSubType::createData() {
+                return (void*)new RobotFeedback();
             }
 
-            void robotFeedbackPubSubType::deleteData(void* data) {
-                delete((robotFeedback*)data);
+            void RobotFeedbackPubSubType::deleteData(void* data) {
+                delete((RobotFeedback*)data);
             }
 
-            bool robotFeedbackPubSubType::getKey(void *data, InstanceHandle_t* handle) {
+            bool RobotFeedbackPubSubType::getKey(void *data, InstanceHandle_t* handle) {
                 if(!m_isGetKeyDefined)
                     return false;
-                robotFeedback* p_type = (robotFeedback*) data;
-                eprosima::fastcdr::FastBuffer fastbuffer((char*)m_keyBuffer,robotFeedback::getKeyMaxCdrSerializedSize()); 	// Object that manages the raw buffer.
+                RobotFeedback* p_type = (RobotFeedback*) data;
+                eprosima::fastcdr::FastBuffer fastbuffer((char*)m_keyBuffer,RobotFeedback::getKeyMaxCdrSerializedSize()); 	// Object that manages the raw buffer.
                 eprosima::fastcdr::Cdr ser(fastbuffer, eprosima::fastcdr::Cdr::BIG_ENDIANNESS); 	// Object that serializes the data.
                 p_type->serializeKey(ser);
-                if(robotFeedback::getKeyMaxCdrSerializedSize()>16)	{
+                if(RobotFeedback::getKeyMaxCdrSerializedSize()>16)	{
                     m_md5.init();
                     m_md5.update(m_keyBuffer,(unsigned int)ser.getSerializedDataLength());
                     m_md5.finalize();

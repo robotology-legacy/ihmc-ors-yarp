@@ -68,46 +68,46 @@ namespace it
         namespace yarp
         {
             /*!
-             * @brief This class represents the structure jointState defined by the user in the IDL file.
+             * @brief This class represents the structure JointState defined by the user in the IDL file.
              * @ingroup ROBOTFEEDBACK
              */
-            class jointState
+            class JointState
             {
             public:
 
                 /*!
                  * @brief Default constructor.
                  */
-                eProsima_user_DllExport jointState();
+                eProsima_user_DllExport JointState();
                 
                 /*!
                  * @brief Default destructor.
                  */
-                eProsima_user_DllExport ~jointState();
+                eProsima_user_DllExport ~JointState();
                 
                 /*!
                  * @brief Copy constructor.
-                 * @param x Reference to the object it::iit::yarp::jointState that will be copied.
+                 * @param x Reference to the object it::iit::yarp::JointState that will be copied.
                  */
-                eProsima_user_DllExport jointState(const jointState &x);
+                eProsima_user_DllExport JointState(const JointState &x);
                 
                 /*!
                  * @brief Move constructor.
-                 * @param x Reference to the object it::iit::yarp::jointState that will be copied.
+                 * @param x Reference to the object it::iit::yarp::JointState that will be copied.
                  */
-                eProsima_user_DllExport jointState(jointState &&x);
+                eProsima_user_DllExport JointState(JointState &&x);
                 
                 /*!
                  * @brief Copy assignment.
-                 * @param x Reference to the object it::iit::yarp::jointState that will be copied.
+                 * @param x Reference to the object it::iit::yarp::JointState that will be copied.
                  */
-                eProsima_user_DllExport jointState& operator=(const jointState &x);
+                eProsima_user_DllExport JointState& operator=(const JointState &x);
                 
                 /*!
                  * @brief Move assignment.
-                 * @param x Reference to the object it::iit::yarp::jointState that will be copied.
+                 * @param x Reference to the object it::iit::yarp::JointState that will be copied.
                  */
-                eProsima_user_DllExport jointState& operator=(jointState &&x);
+                eProsima_user_DllExport JointState& operator=(JointState &&x);
                 
                 /*!
                  * @brief This function sets a value in member tau
@@ -202,7 +202,7 @@ namespace it
                  * @param current_alignment Buffer alignment.
                  * @return Serialized size.
                  */
-                eProsima_user_DllExport static size_t getCdrSerializedSize(const it::iit::yarp::jointState& data, size_t current_alignment = 0);
+                eProsima_user_DllExport static size_t getCdrSerializedSize(const it::iit::yarp::JointState& data, size_t current_alignment = 0);
 
 
                 /*!
@@ -866,46 +866,46 @@ namespace it
                 double m_tauZ;
             };
             /*!
-             * @brief This class represents the structure robotFeedback defined by the user in the IDL file.
+             * @brief This class represents the structure RobotFeedback defined by the user in the IDL file.
              * @ingroup ROBOTFEEDBACK
              */
-            class robotFeedback
+            class RobotFeedback
             {
             public:
 
                 /*!
                  * @brief Default constructor.
                  */
-                eProsima_user_DllExport robotFeedback();
+                eProsima_user_DllExport RobotFeedback();
                 
                 /*!
                  * @brief Default destructor.
                  */
-                eProsima_user_DllExport ~robotFeedback();
+                eProsima_user_DllExport ~RobotFeedback();
                 
                 /*!
                  * @brief Copy constructor.
-                 * @param x Reference to the object it::iit::yarp::robotFeedback that will be copied.
+                 * @param x Reference to the object it::iit::yarp::RobotFeedback that will be copied.
                  */
-                eProsima_user_DllExport robotFeedback(const robotFeedback &x);
+                eProsima_user_DllExport RobotFeedback(const RobotFeedback &x);
                 
                 /*!
                  * @brief Move constructor.
-                 * @param x Reference to the object it::iit::yarp::robotFeedback that will be copied.
+                 * @param x Reference to the object it::iit::yarp::RobotFeedback that will be copied.
                  */
-                eProsima_user_DllExport robotFeedback(robotFeedback &&x);
+                eProsima_user_DllExport RobotFeedback(RobotFeedback &&x);
                 
                 /*!
                  * @brief Copy assignment.
-                 * @param x Reference to the object it::iit::yarp::robotFeedback that will be copied.
+                 * @param x Reference to the object it::iit::yarp::RobotFeedback that will be copied.
                  */
-                eProsima_user_DllExport robotFeedback& operator=(const robotFeedback &x);
+                eProsima_user_DllExport RobotFeedback& operator=(const RobotFeedback &x);
                 
                 /*!
                  * @brief Move assignment.
-                 * @param x Reference to the object it::iit::yarp::robotFeedback that will be copied.
+                 * @param x Reference to the object it::iit::yarp::RobotFeedback that will be copied.
                  */
-                eProsima_user_DllExport robotFeedback& operator=(robotFeedback &&x);
+                eProsima_user_DllExport RobotFeedback& operator=(RobotFeedback &&x);
                 
                 /*!
                  * @brief This function sets a value in member timestampInNanoseconds
@@ -937,7 +937,7 @@ namespace it
                  * @brief This function copies the value in member jointStates
                  * @param _jointStates New value to be copied in member jointStates
                  */
-                inline eProsima_user_DllExport void jointStates(const std::vector<it::iit::yarp::jointState> &_jointStates)
+                inline eProsima_user_DllExport void jointStates(const std::vector<it::iit::yarp::JointState> &_jointStates)
                 {
                     m_jointStates = _jointStates;
                 }
@@ -946,7 +946,7 @@ namespace it
                  * @brief This function moves the value in member jointStates
                  * @param _jointStates New value to be moved in member jointStates
                  */
-                inline eProsima_user_DllExport void jointStates(std::vector<it::iit::yarp::jointState> &&_jointStates)
+                inline eProsima_user_DllExport void jointStates(std::vector<it::iit::yarp::JointState> &&_jointStates)
                 {
                     m_jointStates = std::move(_jointStates);
                 }
@@ -955,7 +955,7 @@ namespace it
                  * @brief This function returns a constant reference to member jointStates
                  * @return Constant reference to member jointStates
                  */
-                inline eProsima_user_DllExport const std::vector<it::iit::yarp::jointState>& jointStates() const
+                inline eProsima_user_DllExport const std::vector<it::iit::yarp::JointState>& jointStates() const
                 {
                     return m_jointStates;
                 }
@@ -964,7 +964,7 @@ namespace it
                  * @brief This function returns a reference to member jointStates
                  * @return Reference to member jointStates
                  */
-                inline eProsima_user_DllExport std::vector<it::iit::yarp::jointState>& jointStates()
+                inline eProsima_user_DllExport std::vector<it::iit::yarp::JointState>& jointStates()
                 {
                     return m_jointStates;
                 }
@@ -1053,7 +1053,7 @@ namespace it
                  * @param current_alignment Buffer alignment.
                  * @return Serialized size.
                  */
-                eProsima_user_DllExport static size_t getCdrSerializedSize(const it::iit::yarp::robotFeedback& data, size_t current_alignment = 0);
+                eProsima_user_DllExport static size_t getCdrSerializedSize(const it::iit::yarp::RobotFeedback& data, size_t current_alignment = 0);
 
 
                 /*!
@@ -1091,7 +1091,7 @@ namespace it
                 
             private:
                 int64_t m_timestampInNanoseconds;
-                std::vector<it::iit::yarp::jointState> m_jointStates;
+                std::vector<it::iit::yarp::JointState> m_jointStates;
                 std::vector<it::iit::yarp::IMUState> m_imuStates;
                 std::vector<it::iit::yarp::ForceSensor> m_forceSensors;
             };
