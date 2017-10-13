@@ -5,7 +5,7 @@ ihmc-ors-yarp
 **Warning: this library is still in active development, and is not supposed to work at this stage**
 
 The `ihmc-ors-yarp` project provides a bridge to interface YARP-powered robots with the [IHMC-ORS](https://github.com/ihmcrobotics/ihmc-open-robotics-software) software.
-In particular `ihmc-ors-yarp` provides the `bridgeIHMCORS` YARP devices, that can be launched through the `yarprobotinterface` to expose YARP controlboards to a controller
+In particular `ihmc-ors-yarp` provides the `bridge_ihmc_ors` YARP devices, that can be launched through the `yarprobotinterface` to expose YARP controlboards to a controller
 implemented using  [IHMC-ORS](https://github.com/ihmcrobotics/ihmc-open-robotics-software).
 
 ## Dependencies
@@ -30,7 +30,7 @@ make
 ```
 
 ### Configure your system
-To make sure that the `bridgeIHMCORS` YARP device is found, add the `<install_prefix>` that you choose to the `YARP_DATA_DIRS` env variable.
+To make sure that the `bridge_ihmc_ors` YARP device is found, add the `<install_prefix>` that you choose to the `YARP_DATA_DIRS` env variable.
 
 ## Usage
 
@@ -42,7 +42,7 @@ We provide a few configuration files to run the device on the iCub Gazebo simula
 yarprobotinterface --config launch-bridgeihmcors-sim.xml
 ~~~
 As the `gazebo_yarp_plugins` do no support launching a YARP device inside Gazebo itself, this configuration file connects
-the `bridgeIHMCORS` to the controlboards through a group of `remote_controlboard` devices. Clearly this is not ideal, but
+the `bridge_ihmc_ors` to the controlboards through a group of `remote_controlboard` devices. Clearly this is not ideal, but
 it is sufficient to testing. The ideal use of this plugin is to embed it in the `yarprobotinterface` that is running the
 controlboard devices exposing the functionalities of the robot.
 
@@ -66,7 +66,7 @@ To run the device on the real robot, it should be sufficient to add this line to
     </device>
 
     <!-- actual bridgeIHMCORS device -->
-    <device name="ihmc_bridge" type="bridgeIHMCORS">
+    <device name="ihmc_bridge" type="bridge_ihmc_ors">
          <param name="period">0.005</param>
 
          <action phase="startup" level="20" type="attach">
