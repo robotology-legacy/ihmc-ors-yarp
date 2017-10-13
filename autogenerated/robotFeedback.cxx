@@ -33,41 +33,32 @@ using namespace eprosima::fastcdr::exception;
 
 #include <utility>
 
-it::iit::yarp::jointState::jointState()
+it::iit::yarp::JointState::JointState()
 {
     m_tau = 0.0;
     m_q = 0.0;
     m_qd = 0.0;
 }
 
-it::iit::yarp::jointState::~jointState()
+it::iit::yarp::JointState::~JointState()
 {
 }
 
-it::iit::yarp::jointState::jointState(const jointState &x)
-{
-    m_tau = x.m_tau;
-    m_q = x.m_q;
-    m_qd = x.m_qd;
-}
-
-it::iit::yarp::jointState::jointState(jointState &&x)
+it::iit::yarp::JointState::JointState(const JointState &x)
 {
     m_tau = x.m_tau;
     m_q = x.m_q;
     m_qd = x.m_qd;
 }
 
-it::iit::yarp::jointState& it::iit::yarp::jointState::operator=(const jointState &x)
+it::iit::yarp::JointState::JointState(JointState &&x)
 {
     m_tau = x.m_tau;
     m_q = x.m_q;
     m_qd = x.m_qd;
-    
-    return *this;
 }
 
-it::iit::yarp::jointState& it::iit::yarp::jointState::operator=(jointState &&x)
+it::iit::yarp::JointState& it::iit::yarp::JointState::operator=(const JointState &x)
 {
     m_tau = x.m_tau;
     m_q = x.m_q;
@@ -76,7 +67,16 @@ it::iit::yarp::jointState& it::iit::yarp::jointState::operator=(jointState &&x)
     return *this;
 }
 
-size_t it::iit::yarp::jointState::getMaxCdrSerializedSize(size_t current_alignment)
+it::iit::yarp::JointState& it::iit::yarp::JointState::operator=(JointState &&x)
+{
+    m_tau = x.m_tau;
+    m_q = x.m_q;
+    m_qd = x.m_qd;
+    
+    return *this;
+}
+
+size_t it::iit::yarp::JointState::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
             
@@ -90,7 +90,7 @@ size_t it::iit::yarp::jointState::getMaxCdrSerializedSize(size_t current_alignme
     return current_alignment - initial_alignment;
 }
 
-size_t it::iit::yarp::jointState::getCdrSerializedSize(const it::iit::yarp::jointState& data, size_t current_alignment)
+size_t it::iit::yarp::JointState::getCdrSerializedSize(const it::iit::yarp::JointState& data, size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
             
@@ -104,21 +104,21 @@ size_t it::iit::yarp::jointState::getCdrSerializedSize(const it::iit::yarp::join
     return current_alignment - initial_alignment;
 }
 
-void it::iit::yarp::jointState::serialize(eprosima::fastcdr::Cdr &scdr) const
+void it::iit::yarp::JointState::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
     scdr << m_tau;
     scdr << m_q;
     scdr << m_qd;
 }
 
-void it::iit::yarp::jointState::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void it::iit::yarp::JointState::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
     dcdr >> m_tau;
     dcdr >> m_q;
     dcdr >> m_qd;
 }
 
-size_t it::iit::yarp::jointState::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t it::iit::yarp::JointState::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
@@ -129,12 +129,12 @@ size_t it::iit::yarp::jointState::getKeyMaxCdrSerializedSize(size_t current_alig
     return current_align;
 }
 
-bool it::iit::yarp::jointState::isKeyDefined()
+bool it::iit::yarp::JointState::isKeyDefined()
 {
     return false;
 }
 
-void it::iit::yarp::jointState::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void it::iit::yarp::JointState::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	 
 	 
@@ -484,7 +484,7 @@ void it::iit::yarp::ForceSensor::serializeKey(eprosima::fastcdr::Cdr &scdr) cons
 	 
 	 
 }
-it::iit::yarp::robotFeedback::robotFeedback()
+it::iit::yarp::RobotFeedback::RobotFeedback()
 {
     m_timestampInNanoseconds = 0;
 
@@ -492,11 +492,11 @@ it::iit::yarp::robotFeedback::robotFeedback()
 
 }
 
-it::iit::yarp::robotFeedback::~robotFeedback()
+it::iit::yarp::RobotFeedback::~RobotFeedback()
 {
 }
 
-it::iit::yarp::robotFeedback::robotFeedback(const robotFeedback &x)
+it::iit::yarp::RobotFeedback::RobotFeedback(const RobotFeedback &x)
 {
     m_timestampInNanoseconds = x.m_timestampInNanoseconds;
     m_jointStates = x.m_jointStates;
@@ -504,7 +504,7 @@ it::iit::yarp::robotFeedback::robotFeedback(const robotFeedback &x)
     m_forceSensors = x.m_forceSensors;
 }
 
-it::iit::yarp::robotFeedback::robotFeedback(robotFeedback &&x)
+it::iit::yarp::RobotFeedback::RobotFeedback(RobotFeedback &&x)
 {
     m_timestampInNanoseconds = x.m_timestampInNanoseconds;
     m_jointStates = std::move(x.m_jointStates);
@@ -512,7 +512,7 @@ it::iit::yarp::robotFeedback::robotFeedback(robotFeedback &&x)
     m_forceSensors = std::move(x.m_forceSensors);
 }
 
-it::iit::yarp::robotFeedback& it::iit::yarp::robotFeedback::operator=(const robotFeedback &x)
+it::iit::yarp::RobotFeedback& it::iit::yarp::RobotFeedback::operator=(const RobotFeedback &x)
 {
     m_timestampInNanoseconds = x.m_timestampInNanoseconds;
     m_jointStates = x.m_jointStates;
@@ -522,7 +522,7 @@ it::iit::yarp::robotFeedback& it::iit::yarp::robotFeedback::operator=(const robo
     return *this;
 }
 
-it::iit::yarp::robotFeedback& it::iit::yarp::robotFeedback::operator=(robotFeedback &&x)
+it::iit::yarp::RobotFeedback& it::iit::yarp::RobotFeedback::operator=(RobotFeedback &&x)
 {
     m_timestampInNanoseconds = x.m_timestampInNanoseconds;
     m_jointStates = std::move(x.m_jointStates);
@@ -532,7 +532,7 @@ it::iit::yarp::robotFeedback& it::iit::yarp::robotFeedback::operator=(robotFeedb
     return *this;
 }
 
-size_t it::iit::yarp::robotFeedback::getMaxCdrSerializedSize(size_t current_alignment)
+size_t it::iit::yarp::RobotFeedback::getMaxCdrSerializedSize(size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
             
@@ -541,7 +541,7 @@ size_t it::iit::yarp::robotFeedback::getMaxCdrSerializedSize(size_t current_alig
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
     for(size_t a = 0; a < 100; ++a)
     {
-        current_alignment += it::iit::yarp::jointState::getMaxCdrSerializedSize(current_alignment);}
+        current_alignment += it::iit::yarp::JointState::getMaxCdrSerializedSize(current_alignment);}
 
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
     for(size_t a = 0; a < 100; ++a)
@@ -557,7 +557,7 @@ size_t it::iit::yarp::robotFeedback::getMaxCdrSerializedSize(size_t current_alig
     return current_alignment - initial_alignment;
 }
 
-size_t it::iit::yarp::robotFeedback::getCdrSerializedSize(const it::iit::yarp::robotFeedback& data, size_t current_alignment)
+size_t it::iit::yarp::RobotFeedback::getCdrSerializedSize(const it::iit::yarp::RobotFeedback& data, size_t current_alignment)
 {
     size_t initial_alignment = current_alignment;
             
@@ -566,7 +566,7 @@ size_t it::iit::yarp::robotFeedback::getCdrSerializedSize(const it::iit::yarp::r
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
     for(size_t a = 0; a < data.jointStates().size(); ++a)
     {
-        current_alignment += it::iit::yarp::jointState::getCdrSerializedSize(data.jointStates().at(a), current_alignment);}
+        current_alignment += it::iit::yarp::JointState::getCdrSerializedSize(data.jointStates().at(a), current_alignment);}
 
     current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
     for(size_t a = 0; a < data.imuStates().size(); ++a)
@@ -582,7 +582,7 @@ size_t it::iit::yarp::robotFeedback::getCdrSerializedSize(const it::iit::yarp::r
     return current_alignment - initial_alignment;
 }
 
-void it::iit::yarp::robotFeedback::serialize(eprosima::fastcdr::Cdr &scdr) const
+void it::iit::yarp::RobotFeedback::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
     scdr << m_timestampInNanoseconds;
     scdr << m_jointStates;
@@ -590,7 +590,7 @@ void it::iit::yarp::robotFeedback::serialize(eprosima::fastcdr::Cdr &scdr) const
     scdr << m_forceSensors;
 }
 
-void it::iit::yarp::robotFeedback::deserialize(eprosima::fastcdr::Cdr &dcdr)
+void it::iit::yarp::RobotFeedback::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
     dcdr >> m_timestampInNanoseconds;
     dcdr >> m_jointStates;
@@ -598,7 +598,7 @@ void it::iit::yarp::robotFeedback::deserialize(eprosima::fastcdr::Cdr &dcdr)
     dcdr >> m_forceSensors;
 }
 
-size_t it::iit::yarp::robotFeedback::getKeyMaxCdrSerializedSize(size_t current_alignment)
+size_t it::iit::yarp::RobotFeedback::getKeyMaxCdrSerializedSize(size_t current_alignment)
 {
 	size_t current_align = current_alignment;
             
@@ -610,12 +610,12 @@ size_t it::iit::yarp::robotFeedback::getKeyMaxCdrSerializedSize(size_t current_a
     return current_align;
 }
 
-bool it::iit::yarp::robotFeedback::isKeyDefined()
+bool it::iit::yarp::RobotFeedback::isKeyDefined()
 {
     return false;
 }
 
-void it::iit::yarp::robotFeedback::serializeKey(eprosima::fastcdr::Cdr &scdr) const
+void it::iit::yarp::RobotFeedback::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 {
 	 
 	 

@@ -36,15 +36,15 @@ namespace it
         namespace yarp
         {
             /*!
-             * @brief This class represents the TopicDataType of the type jointState defined by the user in the IDL file.
+             * @brief This class represents the TopicDataType of the type JointState defined by the user in the IDL file.
              * @ingroup ROBOTFEEDBACK
              */
-            class jointStatePubSubType : public TopicDataType {
+            class JointStatePubSubType : public TopicDataType {
             public:
-                    typedef jointState type;
+                    typedef JointState type;
 
-            	jointStatePubSubType();
-            	virtual ~jointStatePubSubType();
+            	JointStatePubSubType();
+            	virtual ~JointStatePubSubType();
             	bool serialize(void *data, SerializedPayload_t *payload);
             	bool deserialize(SerializedPayload_t *payload, void *data);
                     std::function<uint32_t()> getSerializedSizeProvider(void* data);
@@ -93,15 +93,15 @@ namespace it
             	unsigned char* m_keyBuffer;
             };
             /*!
-             * @brief This class represents the TopicDataType of the type robotFeedback defined by the user in the IDL file.
+             * @brief This class represents the TopicDataType of the type RobotFeedback defined by the user in the IDL file.
              * @ingroup ROBOTFEEDBACK
              */
-            class robotFeedbackPubSubType : public TopicDataType {
+            class RobotFeedbackPubSubType : public TopicDataType {
             public:
-                    typedef robotFeedback type;
+                    typedef RobotFeedback type;
 
-            	robotFeedbackPubSubType();
-            	virtual ~robotFeedbackPubSubType();
+            	RobotFeedbackPubSubType();
+            	virtual ~RobotFeedbackPubSubType();
             	bool serialize(void *data, SerializedPayload_t *payload);
             	bool deserialize(SerializedPayload_t *payload, void *data);
                     std::function<uint32_t()> getSerializedSizeProvider(void* data);

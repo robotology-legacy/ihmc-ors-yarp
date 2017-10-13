@@ -49,7 +49,7 @@
     </device>
 
     <!-- actual bridgeIHMCORS device -->
-    <device name="ihmc_bridge" type="bridgeIHMCORS">
+    <device name="ihmc_bridge" type="bridge_ihmc_ors">
          <param name="period">0.005</param>
 
          <action phase="startup" level="20" type="attach">
