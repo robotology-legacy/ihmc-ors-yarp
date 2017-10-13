@@ -90,3 +90,6 @@ if (ENABLE_${YARP_DEVICE_NAME})
 
 
 endif()
+
+#### add the "uninstall" target
+include(AddUninstallTarget)
