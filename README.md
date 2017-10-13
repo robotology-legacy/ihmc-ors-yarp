@@ -5,7 +5,7 @@ ihmc-ors-yarp
 **Warning: this library is still in active development, and is not supposed to work at this stage**
 
 The `ihmc-ors-yarp` project provides a bridge to interface YARP-powered robots with the [IHMC-ORS](https://github.com/ihmcrobotics/ihmc-open-robotics-software) software.
-In particular ``ihmc-ors-yarp` provides the `bridgeIHMCORS` YARP devices, that can be launched through the `yarprobotinterface` to expose YARP controlboards to a controller
+In particular `ihmc-ors-yarp` provides the `bridgeIHMCORS` YARP devices, that can be launched through the `yarprobotinterface` to expose YARP controlboards to a controller
 implemented using  [IHMC-ORS](https://github.com/ihmcrobotics/ihmc-open-robotics-software).
 
 ## Dependencies
