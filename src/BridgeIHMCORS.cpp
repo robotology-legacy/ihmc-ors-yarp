@@ -36,7 +36,6 @@ bool BridgeIHMCORS::open(yarp::os::Searchable& config)
     return true;
 }
 
-
 bool BridgeIHMCORS::attachAll(const PolyDriverList& p)
 {
     yarp::os::LockGuard guard(m_deviceMutex);
@@ -90,6 +89,7 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
 
             m_jointPositionsFromYARP.resize(nj);
             m_jointVelocitiesFromYARP.resize(nj);
+	    m_jointTorquesFromYARP.resize(nj);
 
             // Resize buffers
             m_robotFeedback.jointStates().resize(nj);
@@ -107,8 +107,6 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
     {
         yError() << "bridgeIHMCORS: impossible to find device that implements IEncoders, ITorqueControl and IAxisInfo interfaces.";
     }
-
-
 
     return foundDevice;
 }
@@ -133,6 +131,7 @@ void BridgeIHMCORS::run()
         bool sensorsReadCorrectly = true;
         sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoders(m_jointPositionsFromYARP.data());
         sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoderSpeeds(m_jointVelocitiesFromYARP.data());
+	sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.trqs->getTorques(m_jointTorquesFromYARP.data());
 
         if (sensorsReadCorrectly)
         {
@@ -148,11 +147,10 @@ void BridgeIHMCORS::run()
                     m_robotFeedback.jointStates()[jnt].q() = m_jointPositionsFromYARP[jnt];
                     m_robotFeedback.jointStates()[jnt].qd() = m_jointVelocitiesFromYARP[jnt];
                 }
-                m_robotFeedback.jointStates()[jnt].tau() = 0.0;
+                m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
 
                 // std::cerr << "m_robotFeedback message updated " << std::endl;
             }
-
 
         }
         else

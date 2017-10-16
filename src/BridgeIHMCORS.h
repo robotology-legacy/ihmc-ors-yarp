@@ -60,6 +60,7 @@ private:
     std::vector<yarp::dev::JointTypeEnum> m_jointTypes;
     std::vector<double> m_jointPositionsFromYARP;
     std::vector<double> m_jointVelocitiesFromYARP;
+    std::vector<double> m_jointTorquesFromYARP;
     
     // FastRTPS robot feedback message 
     it::iit::yarp::RobotFeedback m_robotFeedback;
