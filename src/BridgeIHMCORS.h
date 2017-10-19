@@ -20,9 +20,19 @@
 #include <robotDesired.h>
 #include <robotFeedback.h>
 
+// socket and port communication
+#include <iostream>
+#include <asio.hpp>
+
+// fast_cdr includes for serialization
+#include <fastcdr/FastBuffer.h>
+#include <fastcdr/Cdr.h>
+
+using namespace eprosima::fastcdr;
+using asio::ip::udp;
+
 namespace yarp {
 namespace dev {
-
 
 /**
  * \section bridgeIHMCORS
@@ -34,6 +44,8 @@ namespace dev {
  * | Parameter name | SubParameter   | Type              | Units | Default Value | Required |   Description                                                     | Notes |
  * |:--------------:|:--------------:|:-----------------:|:-----:|:-------------:|:--------:|:-----------------------------------------------------------------:|:-----:|
  * | period         |      -         | double            |   s   | 0.005         | No       | Period at which the feedback collected by the robot devices is sent to the  IHMC-ORS controller | |
+ * | remote-address |      -         | string            |   -   |   -           | Yes      | IP address | |
+ * | remote-portNumber|    -         | string            |   -   |   -           | Yes      | Port number | |
  */
 class BridgeIHMCORS :  public yarp::dev::DeviceDriver,
                        public yarp::dev::IMultipleWrapper,
@@ -71,6 +83,13 @@ private:
 
     // Local buffers for sending desired values
     std::vector<double> m_desiredTorques;
+    
+    // variables for i/o communication 
+    asio::io_service io_srv;
+    udp::endpoint sender_endpoint;
+    
+    // fast_cdr buffer for serialization
+    FastBuffer fastBuffer;
     
 public:
     // CONSTRUCTOR

@@ -8,6 +8,7 @@
 #include <yarp/os/Property.h>
 #include <yarp/os/ResourceFinder.h>
 #include <yarp/os/Time.h>
+#include <yarp/os/Bottle.h>
 
 #include <cassert>
 #include <climits>
@@ -30,9 +31,32 @@ BridgeIHMCORS::~BridgeIHMCORS()
 
 bool BridgeIHMCORS::open(yarp::os::Searchable& config)
 {
-    double periodInSeconds=config.check("period",os::Value(0.005)).asDouble();
+    
+    // Get period
+    double periodInSeconds=config.check("period",os::Value(0.005)).asDouble();    
+    
     int period_ms=int(1000.0*periodInSeconds);
     this->setRate(period_ms);
+    
+    // Configure sockets
+    bool errAddr = false;
+    bool errPort = false;
+    
+    // TODO(nava): error message in case the parameter is not found
+    yarp::os::Value portNumber = config.check("remote-portNumber",errPort);
+    yarp::os::Value address_val = config.check("remote-address",errAddr);    
+    
+    udp::resolver resolver(io_srv);
+    udp::resolver::query query(udp::v4(), address_val.asString(), portNumber.asString());  
+    udp::resolver::iterator iter = resolver.resolve(query);
+    udp::resolver::iterator end; 
+    
+    while (iter != end)
+    {
+    sender_endpoint = *iter++;
+    std::cout << sender_endpoint << std::endl;
+    }
+    
     return true;
 }
 
@@ -89,7 +113,7 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
 
             m_jointPositionsFromYARP.resize(nj);
             m_jointVelocitiesFromYARP.resize(nj);
-	    m_jointTorquesFromYARP.resize(nj);
+            m_jointTorquesFromYARP.resize(nj);
 
             // Resize buffers
             m_robotFeedback.jointStates().resize(nj);
@@ -124,14 +148,15 @@ double rad2deg(const double angleInRad)
 
 void BridgeIHMCORS::run()
 {
+  
     yarp::os::LockGuard guard(m_deviceMutex);
-
+    
     if( m_correctlyConfigured )
     {
         bool sensorsReadCorrectly = true;
         sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoders(m_jointPositionsFromYARP.data());
         sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoderSpeeds(m_jointVelocitiesFromYARP.data());
-	sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.trqs->getTorques(m_jointTorquesFromYARP.data());
+        sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.trqs->getTorques(m_jointTorquesFromYARP.data());
 
         if (sensorsReadCorrectly)
         {
@@ -147,16 +172,37 @@ void BridgeIHMCORS::run()
                     m_robotFeedback.jointStates()[jnt].q() = m_jointPositionsFromYARP[jnt];
                     m_robotFeedback.jointStates()[jnt].qd() = m_jointVelocitiesFromYARP[jnt];
                 }
-                m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
+               
+               m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
+               // std::cerr << "m_robotFeedback message updated " << std::endl;
+            } 
 
-                // std::cerr << "m_robotFeedback message updated " << std::endl;
-            }
 
+           // serialize m_robotFeedback
+           Cdr m_robotFeedback_ser(fastBuffer);
+           m_robotFeedback_ser << m_robotFeedback;
+
+           // open socket
+           udp::socket socket(io_srv);
+           socket.open(udp::v4());
+
+           // TODO(nava): still not clear if it is possible to use directly char* inside asio::buffer
+           std::string send_buf;
+           send_buf = fastBuffer.getBuffer();
+           socket.send_to(asio::buffer(send_buf), sender_endpoint);
+
+           // DEBUG: this is just for verifying serialization (to be removed)
+           m_robotFeedback_ser.reset();
+           it::iit::yarp::RobotFeedback testSerial;
+
+           m_robotFeedback_ser >> testSerial;
+           std::cout << testSerial.jointStates()[0].q() << std::endl;
         }
         else
         {
             yWarning() << "bridgeIHMCORS warning : some sensor were not readed correctly";
         }
+        
     }
 }
 
@@ -205,10 +251,6 @@ void BridgeIHMCORS::onDesiredMessageReceived(const it::iit::yarp::RobotDesireds&
     // Send desired joint torques
     m_wholeBodyControlBoardInterfaces.trqs->setRefTorques(m_desiredTorques.data());
 }
-
-
-
-
 
 }
 }
