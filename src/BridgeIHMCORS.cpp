@@ -19,7 +19,7 @@ namespace yarp
 namespace dev
 {
 
-BridgeIHMCORS::BridgeIHMCORS(): os::RateThread(5)
+BridgeIHMCORS::BridgeIHMCORS(): os::RateThread(5), m_feedbackSocket(nullptr)
 {
     resetInterfaces();
 }
@@ -31,32 +31,58 @@ BridgeIHMCORS::~BridgeIHMCORS()
 
 bool BridgeIHMCORS::open(yarp::os::Searchable& config)
 {
-    
+
+    using asio::ip::udp;
+
     // Get period
-    double periodInSeconds=config.check("period",os::Value(0.005)).asDouble();    
-    
+    double periodInSeconds=config.check("period",os::Value(0.005)).asDouble();
+
     int period_ms=int(1000.0*periodInSeconds);
     this->setRate(period_ms);
-    
+
     // Configure sockets
-    bool errAddr = false;
-    bool errPort = false;
-    
-    // TODO(nava): error message in case the parameter is not found
-    yarp::os::Value portNumber = config.check("remote-portNumber",errPort);
-    yarp::os::Value address_val = config.check("remote-address",errAddr);    
-    
-    udp::resolver resolver(io_srv);
-    udp::resolver::query query(udp::v4(), address_val.asString(), portNumber.asString());  
-    udp::resolver::iterator iter = resolver.resolve(query);
-    udp::resolver::iterator end; 
-    
-    while (iter != end)
+
+    // Configure outbound socket (sending references to remote)
+    yarp::os::Value portNumber = config.find("remote-port-number");
+    yarp::os::Value addressVal = config.find("remote-address");
+
+    if (portNumber.isNull())
     {
-    sender_endpoint = *iter++;
-    std::cout << sender_endpoint << std::endl;
+        yError() << "Port number not found";
+        return false;
     }
-    
+    if (addressVal.isNull())
+    {
+        yError() << "Remote IP address not found";
+        return false;
+    }
+
+    // Trying to match the specified IP address and port number to an endpoint
+    udp::resolver resolver(io_srv);
+    udp::resolver::query query(udp::v4(), addressVal.asString(), portNumber.asString());
+    sender_endpoint = *resolver.resolve(query);
+
+    // TODO(nava): substitute this with an error message in case the parameter is not found
+    std::cout << "verify server endpoint" << std::endl;
+    std::cout << sender_endpoint << std::endl;
+
+    // Opening socket
+    m_feedbackSocket = new udp::socket(io_srv);
+
+    if (!m_feedbackSocket)
+    {
+        yError() << "Fail to create the feedback socket";
+        return false;
+    }
+
+    m_feedbackSocket->open(udp::v4());
+
+    // connect to remote
+
+
+    // Configure inbound socket (commands)
+    //TODO:....
+
     return true;
 }
 
@@ -83,12 +109,12 @@ bool BridgeIHMCORS::attachAll(const PolyDriverList& p)
 bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
 {
     bool foundDevice = false;
-    
+
     // We assume that only one device in the device list passed is a controlboard,
-    // and that it contains all the joint of the robot. 
+    // and that it contains all the joint of the robot.
     // If you want to control with the IHMC bridge only a subset of the joints
-    // or the union of the joints exposed by two different devices, you can 
-    // combine them using the controlboardremapper 
+    // or the union of the joints exposed by two different devices, you can
+    // combine them using the controlboardremapper
     for (size_t devIdx = 0; devIdx < (size_t) p.size(); devIdx++)
     {
         if (p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.encs))
@@ -96,7 +122,7 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             // The considered device implements IEncoders, let's see if it implements all the other interfaces we are interested in
             bool ok = p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.trqs);
             ok = ok && p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.axis);
-            
+
             // Read number of joints to resize buffers
             int nj=0;
             ok = ok && m_wholeBodyControlBoardInterfaces.encs->getAxes(&nj);
@@ -148,9 +174,11 @@ double rad2deg(const double angleInRad)
 
 void BridgeIHMCORS::run()
 {
-  
+
+    using eprosima::fastcdr::Cdr;
+
     yarp::os::LockGuard guard(m_deviceMutex);
-    
+
     if( m_correctlyConfigured )
     {
         bool sensorsReadCorrectly = true;
@@ -172,37 +200,23 @@ void BridgeIHMCORS::run()
                     m_robotFeedback.jointStates()[jnt].q() = m_jointPositionsFromYARP[jnt];
                     m_robotFeedback.jointStates()[jnt].qd() = m_jointVelocitiesFromYARP[jnt];
                 }
-               
+
                m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
                // std::cerr << "m_robotFeedback message updated " << std::endl;
-            } 
+            }
 
 
            // serialize m_robotFeedback
-           Cdr m_robotFeedback_ser(fastBuffer);
-           m_robotFeedback_ser << m_robotFeedback;
+           Cdr m_robotFeedback_ser(m_feedbackBuffer);
+           m_robotFeedback_ser.serialize(m_robotFeedback);
+           m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), sender_endpoint);
 
-           // open socket
-           udp::socket socket(io_srv);
-           socket.open(udp::v4());
-
-           // TODO(nava): still not clear if it is possible to use directly char* inside asio::buffer
-           std::string send_buf;
-           send_buf = fastBuffer.getBuffer();
-           socket.send_to(asio::buffer(send_buf), sender_endpoint);
-
-           // DEBUG: this is just for verifying serialization (to be removed)
-           m_robotFeedback_ser.reset();
-           it::iit::yarp::RobotFeedback testSerial;
-
-           m_robotFeedback_ser >> testSerial;
-           std::cout << testSerial.jointStates()[0].q() << std::endl;
         }
         else
         {
             yWarning() << "bridgeIHMCORS warning : some sensor were not readed correctly";
         }
-        
+
     }
 }
 
@@ -224,6 +238,12 @@ bool BridgeIHMCORS::detachAll()
 
 bool BridgeIHMCORS::close()
 {
+    if (m_feedbackSocket)
+    {
+        m_feedbackSocket->close();
+        delete m_feedbackSocket;
+        m_feedbackSocket = nullptr;
+    }
 }
 
 void BridgeIHMCORS::resetInterfaces()

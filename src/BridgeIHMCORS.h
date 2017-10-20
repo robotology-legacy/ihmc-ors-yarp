@@ -28,16 +28,13 @@
 #include <fastcdr/FastBuffer.h>
 #include <fastcdr/Cdr.h>
 
-using namespace eprosima::fastcdr;
-using asio::ip::udp;
-
 namespace yarp {
 namespace dev {
 
 /**
  * \section bridgeIHMCORS
- * 
- * A YARP device that exposes a robot composed by a set of YARP devices to a IHMC-ORS based controller. 
+ *
+ * A YARP device that exposes a robot composed by a set of YARP devices to a IHMC-ORS based controller.
  *
  *
  *  The parameters taken in input by this device are:
@@ -45,7 +42,7 @@ namespace dev {
  * |:--------------:|:--------------:|:-----------------:|:-----:|:-------------:|:--------:|:-----------------------------------------------------------------:|:-----:|
  * | period         |      -         | double            |   s   | 0.005         | No       | Period at which the feedback collected by the robot devices is sent to the  IHMC-ORS controller | |
  * | remote-address |      -         | string            |   -   |   -           | Yes      | IP address | |
- * | remote-portNumber|    -         | string            |   -   |   -           | Yes      | Port number | |
+ * | remote-port-number|    -         | string            |   -   |   -           | Yes      | Port number | |
  */
 class BridgeIHMCORS :  public yarp::dev::DeviceDriver,
                        public yarp::dev::IMultipleWrapper,
@@ -54,7 +51,7 @@ class BridgeIHMCORS :  public yarp::dev::DeviceDriver,
 private:
     //
     yarp::os::Mutex m_deviceMutex;
-    // Devices used to interface with motor controlboard devices 
+    // Devices used to interface with motor controlboard devices
     struct
     {
         yarp::dev::IEncoders             * encs;
@@ -73,8 +70,8 @@ private:
     std::vector<double> m_jointPositionsFromYARP;
     std::vector<double> m_jointVelocitiesFromYARP;
     std::vector<double> m_jointTorquesFromYARP;
-    
-    // FastRTPS robot feedback message 
+
+    // FastRTPS robot feedback message
     it::iit::yarp::RobotFeedback m_robotFeedback;
 
     // Function to call when a new desired message has been received
@@ -83,14 +80,17 @@ private:
 
     // Local buffers for sending desired values
     std::vector<double> m_desiredTorques;
-    
-    // variables for i/o communication 
+
+    // variables for i/o communication
     asio::io_service io_srv;
-    udp::endpoint sender_endpoint;
-    
+
+    // Creating socket
+    asio::ip::udp::socket * m_feedbackSocket;
+    asio::ip::udp::endpoint sender_endpoint;
+
     // fast_cdr buffer for serialization
-    FastBuffer fastBuffer;
-    
+    eprosima::fastcdr::FastBuffer m_feedbackBuffer;
+
 public:
     // CONSTRUCTOR
     BridgeIHMCORS();
