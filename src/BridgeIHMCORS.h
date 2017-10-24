@@ -20,11 +20,11 @@
 #include <robotDesired.h>
 #include <robotFeedback.h>
 
-// socket and port communication
+// Socket and ports communication
 #include <iostream>
 #include <asio.hpp>
 
-// fast_cdr includes for serialization
+// FastCDR includes for data serialization
 #include <fastcdr/FastBuffer.h>
 #include <fastcdr/Cdr.h>
 
@@ -42,7 +42,7 @@ namespace dev {
  * |:--------------:|:--------------:|:-----------------:|:-----:|:-------------:|:--------:|:-----------------------------------------------------------------:|:-----:|
  * | period         |      -         | double            |   s   | 0.005         | No       | Period at which the feedback collected by the robot devices is sent to the  IHMC-ORS controller | |
  * | remote-address |      -         | string            |   -   |   -           | Yes      | IP address | |
- * | remote-port-number|    -         | string            |   -   |   -           | Yes      | Port number | |
+ * | remote-port-number |  -         | string            |   -   |   -           | Yes      | Port number | |
  */
 class BridgeIHMCORS :  public yarp::dev::DeviceDriver,
                        public yarp::dev::IMultipleWrapper,
@@ -57,6 +57,7 @@ private:
         yarp::dev::IEncoders             * encs;
         yarp::dev::ITorqueControl        * trqs;
         yarp::dev::IAxisInfo             * axis;
+        yarp::dev::IControlMode2         * ctrlMode;
     } m_wholeBodyControlBoardInterfaces;
 
     bool m_correctlyConfigured;
@@ -73,6 +74,7 @@ private:
 
     // FastRTPS robot feedback message
     it::iit::yarp::RobotFeedback m_robotFeedback;
+    it::iit::yarp::RobotDesireds m_robotDesired;
 
     // Function to call when a new desired message has been received
     // TODO(traversaro): make sure that this function is called
@@ -81,15 +83,19 @@ private:
     // Local buffers for sending desired values
     std::vector<double> m_desiredTorques;
 
-    // variables for i/o communication
-    asio::io_service io_srv;
+    // Variables for i/o communication
+    asio::io_service * m_feedbackService;
+    asio::io_service * m_desiredService;
 
-    // Creating socket
+    // Creating sockets and endpoints
     asio::ip::udp::socket * m_feedbackSocket;
-    asio::ip::udp::endpoint sender_endpoint;
+    asio::ip::udp::socket * m_desiredSocket;
+    asio::ip::udp::endpoint m_feedbackEndpoint;
+    asio::ip::udp::endpoint m_desiredEndpoint;
 
-    // fast_cdr buffer for serialization
+    // FastCDR buffer for serialization
     eprosima::fastcdr::FastBuffer m_feedbackBuffer;
+    eprosima::fastcdr::FastBuffer m_desiredBuffer;
 
 public:
     // CONSTRUCTOR

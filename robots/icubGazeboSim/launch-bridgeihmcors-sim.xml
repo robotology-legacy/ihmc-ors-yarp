@@ -51,8 +51,10 @@
     <!-- actual bridgeIHMCORS device -->
     <device name="ihmc_bridge" type="bridge_ihmc_ors">
          <param name="period">0.005</param>
-         <param name="remote-address">localhost</param>
-         <param name="remote-port-number">"9876"</param>
+         <param name="feedback-address">localhost</param>
+         <param name="feedback-port-number">"9876"</param>
+         <param name="desired-address">localhost</param>
+         <param name="desired-port-number">"9888"</param>
 
          <action phase="startup" level="20" type="attach">
             <paramlist name="networks">

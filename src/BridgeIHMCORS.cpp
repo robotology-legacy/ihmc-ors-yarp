@@ -36,52 +36,79 @@ bool BridgeIHMCORS::open(yarp::os::Searchable& config)
 
     // Get period
     double periodInSeconds=config.check("period",os::Value(0.005)).asDouble();
-
     int period_ms=int(1000.0*periodInSeconds);
     this->setRate(period_ms);
 
     // Configure sockets
 
     // Configure outbound socket (sending references to remote)
-    yarp::os::Value portNumber = config.find("remote-port-number");
-    yarp::os::Value addressVal = config.find("remote-address");
+    yarp::os::Value feedbackPortNumber = config.find("feedback-port-number");
+    yarp::os::Value feedbackAddressVal = config.find("feedback-address");
 
-    if (portNumber.isNull())
+    if (feedbackPortNumber.isNull())
     {
-        yError() << "Port number not found";
+        yError() << "Port number for sending feedback not found";
         return false;
     }
-    if (addressVal.isNull())
+    if (feedbackAddressVal.isNull())
     {
-        yError() << "Remote IP address not found";
+        yError() << "IP address for sending feedback not found";
         return false;
     }
 
     // Trying to match the specified IP address and port number to an endpoint
-    udp::resolver resolver(io_srv);
-    udp::resolver::query query(udp::v4(), addressVal.asString(), portNumber.asString());
-    sender_endpoint = *resolver.resolve(query);
+    m_feedbackService = new asio::io_service;
+    udp::resolver resolver(*m_feedbackService);
+    udp::resolver::query query(udp::v4(), feedbackAddressVal.asString(), feedbackPortNumber.asString());
+    m_feedbackEndpoint = *resolver.resolve(query);
 
     // TODO(nava): substitute this with an error message in case the parameter is not found
-    std::cout << "verify server endpoint" << std::endl;
-    std::cout << sender_endpoint << std::endl;
+    std::cout << "Current endpoint for sending feedback:" << m_feedbackEndpoint << std::endl;
 
-    // Opening socket
-    m_feedbackSocket = new udp::socket(io_srv);
+    // Opening feedback socket
+    m_feedbackSocket = new udp::socket(*m_feedbackService);
 
     if (!m_feedbackSocket)
     {
-        yError() << "Fail to create the feedback socket";
+        yError() << "Fail to create the ""feedback"" socket";
         return false;
     }
 
     m_feedbackSocket->open(udp::v4());
 
-    // connect to remote
+    // Configure inbound socket (receiving commands)
+    yarp::os::Value desiredPortNumber = config.find("desired-port-number");
+    yarp::os::Value desiredAddressVal = config.find("desired-address");
 
+    if (desiredPortNumber.isNull())
+    {
+        yError() << "Port number for receiving data not found";
+        return false;
+    }
+    if (desiredAddressVal.isNull())
+    {
+        yError() << "IP address for receiving data not found";
+        return false;
+    }
 
-    // Configure inbound socket (commands)
-    //TODO:....
+    // Trying to match the specified IP address and port number to an endpoint
+    m_desiredService = new asio::io_service;
+    udp::resolver resolverDesired(*m_desiredService);
+    udp::resolver::query queryDesired(udp::v4(), desiredAddressVal.asString(), desiredPortNumber.asString());
+    m_desiredEndpoint = *resolverDesired.resolve(queryDesired);
+
+    // TODO(nava): substitute this with an error message in case the parameter is not found
+    std::cout << "Current endpoint for receiving data:" << m_desiredEndpoint << std::endl;
+
+    m_desiredSocket = new udp::socket(*m_desiredService);
+
+    if (!m_desiredSocket)
+    {
+        yError() << "Fail to create the ""desired"" socket";
+        return false;
+    }
+    m_desiredSocket->open(udp::v4());
+    m_desiredSocket->bind(m_desiredEndpoint);
 
     return true;
 }
@@ -122,6 +149,7 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             // The considered device implements IEncoders, let's see if it implements all the other interfaces we are interested in
             bool ok = p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.trqs);
             ok = ok && p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.axis);
+            ok = ok && p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.ctrlMode);
 
             // Read number of joints to resize buffers
             int nj=0;
@@ -141,12 +169,20 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             m_jointVelocitiesFromYARP.resize(nj);
             m_jointTorquesFromYARP.resize(nj);
 
+            m_desiredTorques.resize(nj);
+
             // Resize buffers
             m_robotFeedback.jointStates().resize(nj);
             m_robotFeedback.forceSensors().resize(0);
             m_robotFeedback.imuStates().resize(0);
 
-            m_desiredTorques.resize(nj);
+            m_robotDesired.jointDesireds().resize(nj);
+
+            // Resize FastCDR feedback buffer to the size of m_robotFeedback
+            m_feedbackBuffer.resize(m_robotFeedback.getCdrSerializedSize(m_robotFeedback));
+
+            // Resize FastCDR desired buffer to the max size
+            m_desiredBuffer.resize(m_robotFeedback.getMaxCdrSerializedSize());
 
             foundDevice = ok;
             break; // see assumption
@@ -205,18 +241,23 @@ void BridgeIHMCORS::run()
                // std::cerr << "m_robotFeedback message updated " << std::endl;
             }
 
-
-           // serialize m_robotFeedback
-           Cdr m_robotFeedback_ser(m_feedbackBuffer);
-           m_robotFeedback_ser.serialize(m_robotFeedback);
-           m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), sender_endpoint);
-
+           // Serialize m_robotFeedback and send message using udp
+           Cdr robotFeedbackSer(m_feedbackBuffer);
+           m_robotFeedback.serialize(robotFeedbackSer);
+           m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), m_feedbackEndpoint);
         }
         else
         {
             yWarning() << "bridgeIHMCORS warning : some sensor were not readed correctly";
         }
 
+        // Deserialize received data (desired)
+        size_t len = m_desiredSocket->receive_from(asio::buffer(m_desiredBuffer.getBuffer(), m_desiredBuffer.getBufferSize()), m_desiredEndpoint);
+        Cdr robotDesiredSer(m_desiredBuffer);
+        m_robotDesired.deserialize(robotDesiredSer);
+
+        // Fill m_desiredTorques vector and send references to the robot
+        onDesiredMessageReceived(m_robotDesired);
     }
 }
 

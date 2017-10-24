@@ -88,7 +88,7 @@ if (ENABLE_${YARP_DEVICE_NAME})
   yarp_install(TARGETS ${YARP_DEVICE_NAME}
                COMPONENT Runtime
                LIBRARY DESTINATION ${YARP_DYNAMIC_PLUGINS_INSTALL_DIR}
-               ARCHIVE DESTINATION ${YARP_STATIC_PLUGINS_INSTALL_DIR}) 
+               ARCHIVE DESTINATION ${YARP_STATIC_PLUGINS_INSTALL_DIR})
 
 endif()
 
@@ -97,10 +97,12 @@ option(BUILD_EXAMPLE_SOCKET "Enable compilation of a simple UDP socket example" 
 
 if (BUILD_EXAMPLE_SOCKET)
 
-  add_executable(testUDP ${CMAKE_SOURCE_DIR}/examples/testUDP.cpp)
-  target_link_libraries(testUDP Threads::Threads)
+  add_executable(testSocket ${CMAKE_SOURCE_DIR}/examples/testSocket.cpp)
+  target_link_libraries(testSocket Threads::Threads
+                                   fastcdr
+                                   idl_messages)
 
 endif()
-  
+
 #### add the "uninstall" target
 include(AddUninstallTarget)
