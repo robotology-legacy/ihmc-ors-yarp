@@ -32,8 +32,8 @@ int main(int argc, char* argv[])
     udp::resolver sender_resolver(sender_io_service);
     udp::resolver receiver_resolver(receiver_io_service);
 
-    udp::resolver::query sender_query(udp::v4(), argv[1], "9888");
-    udp::resolver::query receiver_query(udp::v4(), argv[1], "9876");
+    udp::resolver::query sender_query(udp::v4(), argv[1], "9980");
+    udp::resolver::query receiver_query(udp::v4(), argv[1], "9970");
 
     udp::endpoint sender_endpoint;
     udp::endpoint receiver_endpoint;

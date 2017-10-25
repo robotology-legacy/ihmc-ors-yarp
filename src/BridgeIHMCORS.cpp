@@ -19,6 +19,77 @@ namespace yarp
 namespace dev
 {
 
+BridgeIHMCORSReceiverThread::BridgeIHMCORSReceiverThread(): m_parentDevice(nullptr),
+                                                            m_desiredSocket(nullptr),
+                                                            m_desiredService(nullptr)
+{}
+
+bool BridgeIHMCORSReceiverThread::configure(BridgeIHMCORS *parentDevice, yarp::os::Searchable& config)
+{
+    m_parentDevice = parentDevice;
+
+    // Configure inbound socket (receiving commands)
+    yarp::os::Value desiredPortNumber = config.check("desired-port-number", yarp::os::Value("9980"));
+    yarp::os::Value desiredAddressVal = config.find("desired-address");
+
+    if (desiredAddressVal.isNull())
+    {
+        yError() << "IP address for receiving data not found";
+        return false;
+    }
+
+    // Trying to match the specified IP address and port number to an endpoint
+    m_desiredService = new asio::io_service;
+    asio::ip::udp::resolver resolverDesired(*m_desiredService);
+    asio::ip::udp::resolver::query queryDesired(asio::ip::udp::v4(), desiredAddressVal.asString(), desiredPortNumber.asString());
+    m_desiredEndpoint = *resolverDesired.resolve(queryDesired);
+
+    // TODO(nava): substitute this with an error message in case the parameter is not found
+    std::cout << "Current endpoint for receiving data:" << m_desiredEndpoint << std::endl;
+
+    m_desiredSocket = new asio::ip::udp::socket(*m_desiredService);
+
+    if (!m_desiredSocket)
+    {
+        yError() << "Fail to create the ""desired"" socket";
+        return false;
+    }
+    m_desiredSocket->open(asio::ip::udp::v4());
+    m_desiredSocket->bind(m_desiredEndpoint);
+
+    return true;
+}
+
+void BridgeIHMCORSReceiverThread::resize(const int nrOfJoints)
+{
+    m_robotDesired.jointDesireds().resize(nrOfJoints);
+    m_desiredBuffer.resize(m_robotDesired.getMaxCdrSerializedSize());
+}
+
+void BridgeIHMCORSReceiverThread::run()
+{
+    while (!isStopping())
+    {
+        // Deserialize received data (desired)
+        size_t len = m_desiredSocket->receive_from(
+                asio::buffer(m_desiredBuffer.getBuffer(), m_desiredBuffer.getBufferSize()), m_desiredEndpoint);
+        eprosima::fastcdr::Cdr robotDesiredSer(m_desiredBuffer);
+        m_robotDesired.deserialize(robotDesiredSer);
+
+        // Fill m_desiredTorques vector and send references to the robot
+        m_parentDevice->onDesiredMessageReceived(m_robotDesired);
+    }
+}
+
+void BridgeIHMCORSReceiverThread::threadRelease()
+{
+    m_parentDevice = nullptr;
+    delete m_desiredSocket;
+    m_desiredSocket = nullptr;
+    delete m_desiredService;
+    m_desiredService = nullptr;
+}
+
 BridgeIHMCORS::BridgeIHMCORS(): os::RateThread(5), m_feedbackSocket(nullptr)
 {
     resetInterfaces();
@@ -31,7 +102,6 @@ BridgeIHMCORS::~BridgeIHMCORS()
 
 bool BridgeIHMCORS::open(yarp::os::Searchable& config)
 {
-
     using asio::ip::udp;
 
     // Get period
@@ -39,10 +109,13 @@ bool BridgeIHMCORS::open(yarp::os::Searchable& config)
     int period_ms=int(1000.0*periodInSeconds);
     this->setRate(period_ms);
 
+    // Get desired timeout
+    m_desiredTimeoutInSeconds=config.check("desired-timeout",os::Value(0.1)).asDouble();
+
     // Configure sockets
 
     // Configure outbound socket (sending references to remote)
-    yarp::os::Value feedbackPortNumber = config.find("feedback-port-number");
+    yarp::os::Value feedbackPortNumber = config.check("feedback-port-number", yarp::os::Value("9970"));
     yarp::os::Value feedbackAddressVal = config.find("feedback-address");
 
     if (feedbackPortNumber.isNull())
@@ -76,59 +149,27 @@ bool BridgeIHMCORS::open(yarp::os::Searchable& config)
 
     m_feedbackSocket->open(udp::v4());
 
-    // Configure inbound socket (receiving commands)
-    yarp::os::Value desiredPortNumber = config.find("desired-port-number");
-    yarp::os::Value desiredAddressVal = config.find("desired-address");
-
-    if (desiredPortNumber.isNull())
-    {
-        yError() << "Port number for receiving data not found";
-        return false;
-    }
-    if (desiredAddressVal.isNull())
-    {
-        yError() << "IP address for receiving data not found";
-        return false;
-    }
-
-    // Trying to match the specified IP address and port number to an endpoint
-    m_desiredService = new asio::io_service;
-    udp::resolver resolverDesired(*m_desiredService);
-    udp::resolver::query queryDesired(udp::v4(), desiredAddressVal.asString(), desiredPortNumber.asString());
-    m_desiredEndpoint = *resolverDesired.resolve(queryDesired);
-
-    // TODO(nava): substitute this with an error message in case the parameter is not found
-    std::cout << "Current endpoint for receiving data:" << m_desiredEndpoint << std::endl;
-
-    m_desiredSocket = new udp::socket(*m_desiredService);
-
-    if (!m_desiredSocket)
-    {
-        yError() << "Fail to create the ""desired"" socket";
-        return false;
-    }
-    m_desiredSocket->open(udp::v4());
-    m_desiredSocket->bind(m_desiredEndpoint);
+    // Configuring receiving thread
+    m_receivingThread.configure(this, config);
 
     return true;
 }
 
 bool BridgeIHMCORS::attachAll(const PolyDriverList& p)
 {
-    yarp::os::LockGuard guard(m_deviceMutex);
-
     bool ok = true;
     ok = ok && attachWholeBodyControlBoard(p);
 
     if (ok)
     {
+        // If everything is ok, start the threads
+
+        // Thread streaming the feedback
         this->start();
+
+        // Thread receiving the desired values
+        m_receivingThread.start();
     }
-
-    // TODO(traversaro) : at this point, everything is ready, so we should also attach in someway a callback
-    //                    on a received desired message to onDesiredMessageReceived
-
-    m_correctlyConfigured = ok;
 
     return ok;
 }
@@ -165,10 +206,13 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
                 }
             }
 
-            m_jointPositionsFromYARP.resize(nj);
-            m_jointVelocitiesFromYARP.resize(nj);
+            m_jointPositionsFromYARPInDeg.resize(nj);
+            m_jointVelocitiesFromYARPInDegPerSec.resize(nj);
             m_jointTorquesFromYARP.resize(nj);
 
+            m_measuredControlModes.resize(nj);
+            m_controlModeTorque.resize(nj, VOCAB_CM_TORQUE);
+            m_controlModePosition.resize(nj, VOCAB_CM_POSITION);
             m_desiredTorques.resize(nj);
 
             // Resize buffers
@@ -176,13 +220,13 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             m_robotFeedback.forceSensors().resize(0);
             m_robotFeedback.imuStates().resize(0);
 
-            m_robotDesired.jointDesireds().resize(nj);
 
             // Resize FastCDR feedback buffer to the size of m_robotFeedback
             m_feedbackBuffer.resize(m_robotFeedback.getCdrSerializedSize(m_robotFeedback));
 
-            // Resize FastCDR desired buffer to the max size
-            m_desiredBuffer.resize(m_robotFeedback.getMaxCdrSerializedSize());
+
+            // Resize the internal buffers of the receiving thread
+            m_receivingThread.resize(nj);
 
             foundDevice = ok;
             break; // see assumption
@@ -210,67 +254,75 @@ double rad2deg(const double angleInRad)
 
 void BridgeIHMCORS::run()
 {
-
     using eprosima::fastcdr::Cdr;
 
-    yarp::os::LockGuard guard(m_deviceMutex);
+    bool sensorsReadCorrectly = true;
+    m_sensorReadingsMutex.lock();
+    sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoders(m_jointPositionsFromYARPInDeg.data());
+    sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoderSpeeds(m_jointVelocitiesFromYARPInDegPerSec.data());
+    sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.trqs->getTorques(m_jointTorquesFromYARP.data());
+    m_sensorReadingsMutex.unlock();
 
-    if( m_correctlyConfigured )
+    if (sensorsReadCorrectly)
     {
-        bool sensorsReadCorrectly = true;
-        sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoders(m_jointPositionsFromYARP.data());
-        sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.encs->getEncoderSpeeds(m_jointVelocitiesFromYARP.data());
-        sensorsReadCorrectly = sensorsReadCorrectly && m_wholeBodyControlBoardInterfaces.trqs->getTorques(m_jointTorquesFromYARP.data());
+        m_sensorsReadingsAvailable = true;
 
-        if (sensorsReadCorrectly)
+        for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
         {
-            for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
+            if (m_jointTypes[jnt] == VOCAB_JOINTTYPE_REVOLUTE)
             {
-                if (m_jointTypes[jnt] == VOCAB_JOINTTYPE_REVOLUTE)
-                {
-                    m_robotFeedback.jointStates()[jnt].q() = deg2rad(m_jointPositionsFromYARP[jnt]);
-                    m_robotFeedback.jointStates()[jnt].qd() = deg2rad(m_jointVelocitiesFromYARP[jnt]);
-                }
-                else
-                {
-                    m_robotFeedback.jointStates()[jnt].q() = m_jointPositionsFromYARP[jnt];
-                    m_robotFeedback.jointStates()[jnt].qd() = m_jointVelocitiesFromYARP[jnt];
-                }
-
-               m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
-               // std::cerr << "m_robotFeedback message updated " << std::endl;
+                m_robotFeedback.jointStates()[jnt].q() = deg2rad(m_jointPositionsFromYARPInDeg[jnt]);
+                m_robotFeedback.jointStates()[jnt].qd() = deg2rad(m_jointVelocitiesFromYARPInDegPerSec[jnt]);
+            }
+            else
+            {
+                m_robotFeedback.jointStates()[jnt].q() = m_jointPositionsFromYARPInDeg[jnt];
+                m_robotFeedback.jointStates()[jnt].qd() = m_jointVelocitiesFromYARPInDegPerSec[jnt];
             }
 
-           // Serialize m_robotFeedback and send message using udp
-           Cdr robotFeedbackSer(m_feedbackBuffer);
-           m_robotFeedback.serialize(robotFeedbackSer);
-           m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), m_feedbackEndpoint);
+           m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
+           // std::cerr << "m_robotFeedback message updated " << std::endl;
         }
-        else
+
+       // Serialize m_robotFeedback and send message using udp
+       Cdr robotFeedbackSer(m_feedbackBuffer);
+       m_robotFeedback.serialize(robotFeedbackSer);
+       m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), m_feedbackEndpoint);
+    }
+    else
+    {
+        yWarning() << "BridgeIHMCORS: some sensor were not read correctly";
+    }
+
+    // Handle timeout of desired messages
+    if (m_controlActive)
+    {
+        double timeSinceLastFeedback = yarp::os::Time::now()-m_lastTimeOfReceivedDesiredMessage;
+
+        if (timeSinceLastFeedback > m_desiredTimeoutInSeconds)
         {
-            yWarning() << "bridgeIHMCORS warning : some sensor were not readed correctly";
+            m_controlActive = false;
+            m_wholeBodyControlBoardInterfaces.ctrlMode->setControlModes(m_controlModePosition.data());
+            yInfo("BridgeIHMCORS: %lf seconds passed without receiving a message from the IHMC-ORS controller, switching back the robot to position mode.", timeSinceLastFeedback);
         }
-
-        // Deserialize received data (desired)
-        size_t len = m_desiredSocket->receive_from(asio::buffer(m_desiredBuffer.getBuffer(), m_desiredBuffer.getBufferSize()), m_desiredEndpoint);
-        Cdr robotDesiredSer(m_desiredBuffer);
-        m_robotDesired.deserialize(robotDesiredSer);
-
-        // Fill m_desiredTorques vector and send references to the robot
-        onDesiredMessageReceived(m_robotDesired);
     }
 }
 
 bool BridgeIHMCORS::detachAll()
 {
-    yarp::os::LockGuard guard(m_deviceMutex);
+    // Stop the threads
 
+    // Stop streaming thread and wait for termination
     if (isRunning())
     {
         stop();
     }
 
-    // We should disconnect the callback on the new message now
+    // Stop receiving thread and wait for termination
+    if (m_receivingThread.isRunning())
+    {
+        m_receivingThread.stop();
+    }
 
     resetInterfaces();
 
@@ -285,32 +337,70 @@ bool BridgeIHMCORS::close()
         delete m_feedbackSocket;
         m_feedbackSocket = nullptr;
     }
+
+    return true;
 }
 
 void BridgeIHMCORS::resetInterfaces()
 {
-    m_correctlyConfigured = false;
     m_wholeBodyControlBoardInterfaces.encs = nullptr;
     m_wholeBodyControlBoardInterfaces.trqs = nullptr;
     m_wholeBodyControlBoardInterfaces.axis = nullptr;
+    m_wholeBodyControlBoardInterfaces.ctrlMode = nullptr;
+    m_controlActive = false;
+    m_sensorsReadingsAvailable = false;
 }
 
 void BridgeIHMCORS::onDesiredMessageReceived(const it::iit::yarp::RobotDesireds& receivedRobotDesired)
 {
     if (receivedRobotDesired.jointDesireds().size() != m_jointTypes.size())
     {
-        yError() << "bridgeIHMCORS: Wrong number of joints in it::iit::yarp::RobotDesireds received message";
+        yError() << "BridgeIHMCORS: Wrong number of joints in it::iit::yarp::RobotDesireds received message";
         return;
     }
 
-    // TODO(traversaro): handle translation between control modes and enabled/disabled flags
+    // If no sensors was available, to not run the "IHMC"-joint control loop
+    if (!m_sensorsReadingsAvailable)
+    {
+        return;
+    }
+
+    // Handle control mode
+
+    // Reading the control mode is fast
+    bool needToSetControlModeToTorque = false;
+    m_wholeBodyControlBoardInterfaces.ctrlMode->getControlModes(m_measuredControlModes.data());
     for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
     {
-        m_desiredTorques[jnt] = receivedRobotDesired.jointDesireds()[jnt].tau();
+        if (m_measuredControlModes[jnt] != VOCAB_CM_TORQUE)
+        {
+            needToSetControlModeToTorque = true;
+        }
     }
+
+    // todo(traversaro): check if this blocking call is problematic
+    if (needToSetControlModeToTorque)
+    {
+        m_wholeBodyControlBoardInterfaces.ctrlMode->setControlModes(m_controlModeTorque.data());
+    }
+
+    // Compute desired torques using the IHMC control law
+    m_sensorReadingsMutex.lock();
+    for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
+    {
+        const it::iit::yarp::JointDesired& jd = receivedRobotDesired.jointDesireds()[jnt];
+        m_desiredTorques[jnt] = jd.tau() +
+                                jd.kp()*( jd.qDesired()  - deg2rad(m_jointPositionsFromYARPInDeg[jnt]) ) +
+                                jd.kd()*( jd.qdDesired() - deg2rad(m_jointVelocitiesFromYARPInDegPerSec[jnt]) );
+    }
+    m_sensorReadingsMutex.unlock();
 
     // Send desired joint torques
     m_wholeBodyControlBoardInterfaces.trqs->setRefTorques(m_desiredTorques.data());
+
+    // Set the state of the control to active and save the last instant in which the feedback message have been received
+    m_controlActive = true;
+    m_lastTimeOfReceivedDesiredMessage = yarp::os::Time::now();
 }
 
 }

@@ -1,0 +1,28 @@
+<application>
+    <name>Fixture for testing the BridgeIHMCORS.</name>
+    <description>A fixture containing the iCub simulator running in Gazebo, and the BridgeIHMCORS running on a separated interface.</description>
+    <version>1.0</version>
+    <authors>
+        <author email="silvio.traversaro@iit.it">Silvio Traversaro</author>
+    </authors>
+    <module>
+        <name>gzserver</name>
+        <parameters>icub_fixed.world</parameters>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>gzclient</name>
+        <dependencies>
+            <port timeout="10">/icubSim/right_leg/state:o</port>
+        </dependencies>
+        <node>localhost</node>
+    </module>
+    <module>
+        <name>yarprobotinterface</name>
+        <parameters>--config @CMAKE_SOURCE_DIR@/robots/icubGazeboSim/lauch-bridgeihmcors-sim.xml</parameters>
+        <dependencies>
+            <port timeout="10">/icubSim/right_leg/state:o</port>
+        </dependencies>
+        <node>localhost</node>
+    </module>
+</application>

@@ -14,7 +14,6 @@ find_package(fastcdr REQUIRED)
 
 # Find Asio and Threads, both required for opening sockets from C++
 find_package(Asio REQUIRED)
-find_package(Threads REQUIRED)
 
 # .idl generated messages require C++11
 set(CMAKE_CXX_STANDARD 11)
@@ -64,18 +63,20 @@ yarp_prepare_plugin(${YARP_DEVICE_NAME} TYPE yarp::dev::BridgeIHMCORS
                                         DEFAULT ON
                                         ADVANCED)
 
-if (ENABLE_${YARP_DEVICE_NAME})
+if(ENABLE_${YARP_DEVICE_NAME})
 
   yarp_add_plugin(${YARP_DEVICE_NAME}
                   src/BridgeIHMCORS.cpp
                   src/BridgeIHMCORS.h)
 
   target_include_directories(${YARP_DEVICE_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+  # There seems to be an issue with the Asio::Asio imported target
+  target_include_directories(${YARP_DEVICE_NAME} PRIVATE ${Asio_INCLUDE_DIRS})
   target_link_libraries(${YARP_DEVICE_NAME} YARP::YARP_OS
                                             YARP::YARP_dev
                                             YARP::YARP_init
                                             idl_messages
-                                            Threads::Threads)
+                                            fastcdr)
 
   yarp_install(FILES src/${YARP_DEVICE_NAME}.ini
                COMPONENT runtime
@@ -96,13 +97,21 @@ endif()
 option(BUILD_EXAMPLE_SOCKET "Enable compilation of a simple UDP socket example" FALSE)
 
 if (BUILD_EXAMPLE_SOCKET)
-
-  add_executable(testSocket ${CMAKE_SOURCE_DIR}/examples/testSocket.cpp)
-  target_link_libraries(testSocket Threads::Threads
-                                   fastcdr
+  add_executable(testSocket examples/testSocket.cpp)
+  target_include_directories(testSocket PRIVATE ${Asio_INCLUDE_DIRS})
+  target_link_libraries(testSocket fastcdr
                                    idl_messages)
 
 endif()
 
-#### add the "uninstall" target
+# Add tests
+option(BUILD_TESTING "Create tests using CMake" OFF)
+if(BUILD_TESTING)
+  include(CTest)
+  enable_testing()
+  # add_subdirectory(tests)
+endif()
+
+# Add the "uninstall" target
 include(AddUninstallTarget)
+

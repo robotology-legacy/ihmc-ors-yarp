@@ -7,6 +7,7 @@
 
 // YARP includes
 #include <yarp/os/Mutex.h>
+#include <yarp/os/Thread.h>
 #include <yarp/os/RateThread.h>
 
 #include <yarp/dev/DeviceDriver.h>
@@ -31,6 +32,38 @@
 namespace yarp {
 namespace dev {
 
+class BridgeIHMCORS;
+
+class BridgeIHMCORSReceiverThread : public yarp::os::Thread
+{
+    BridgeIHMCORS * m_parentDevice;
+
+    asio::ip::udp::socket * m_desiredSocket;
+    asio::ip::udp::endpoint m_desiredEndpoint;
+    asio::io_service * m_desiredService;
+
+    // FastCDR buffer for serialization
+    it::iit::yarp::RobotDesireds m_robotDesired;
+    eprosima::fastcdr::FastBuffer m_desiredBuffer;
+
+
+public:
+    // Constructor
+    BridgeIHMCORSReceiverThread();
+
+    // Configure method
+    bool configure(BridgeIHMCORS * parentDevice, yarp::os::Searchable& config);
+
+    // Method to resize the internal buffers
+    void resize(const int nrOfJoints);
+
+    // Documented in yarp::os::Thread
+    virtual void run();
+
+    // Document in yarp::os::Thread
+    virtual void threadRelease();
+};
+
 /**
  * \section bridgeIHMCORS
  *
@@ -40,17 +73,18 @@ namespace dev {
  *  The parameters taken in input by this device are:
  * | Parameter name | SubParameter   | Type              | Units | Default Value | Required |   Description                                                     | Notes |
  * |:--------------:|:--------------:|:-----------------:|:-----:|:-------------:|:--------:|:-----------------------------------------------------------------:|:-----:|
- * | period         |      -         | double            |   s   | 0.005         | No       | Period at which the feedback collected by the robot devices is sent to the  IHMC-ORS controller | |
- * | remote-address |      -         | string            |   -   |   -           | Yes      | IP address | |
- * | remote-port-number |  -         | string            |   -   |   -           | Yes      | Port number | |
+ * | period         |      -         | double            |   s   | 0.005         | No       | Period at which the feedback collected by the robot devices is sent to the  IHMC-ORS controller. | |
+ * | desired-timeout  |      -         | double            |   s   | 0.100         | No       | If no desired message has been received for this time, switch back the control mode of the joints to position control.  | |
+ * | feedback-address |      -         | string            |   -   |   -           | Yes      | IP address to which to send the feedback datagram. | |
+ * | feedback-port-number |  -         | string            |   -   |   9970           | No      | Port number to which to send the feedback datagram. | |
+ * | desired-address |  -          | string                |   -   |   -           | Yes      | IP address (of the current machine) on which to listen for incoming desired joints datagrams. | |
+ * | desired-port-number |  -          | string            |   -   |   9980           | No      | Port number on which to listen for incoming desired joints datagrams. | |
  */
 class BridgeIHMCORS :  public yarp::dev::DeviceDriver,
                        public yarp::dev::IMultipleWrapper,
                        public yarp::os::RateThread
 {
 private:
-    //
-    yarp::os::Mutex m_deviceMutex;
     // Devices used to interface with motor controlboard devices
     struct
     {
@@ -60,42 +94,44 @@ private:
         yarp::dev::IControlMode2         * ctrlMode;
     } m_wholeBodyControlBoardInterfaces;
 
-    bool m_correctlyConfigured;
-
     // Helper methods to deal with C++ interfaces
     bool attachWholeBodyControlBoard(const PolyDriverList& p);
     void resetInterfaces();
 
-    // Local buffers for readings sensors
     std::vector<yarp::dev::JointTypeEnum> m_jointTypes;
-    std::vector<double> m_jointPositionsFromYARP;
-    std::vector<double> m_jointVelocitiesFromYARP;
+
+    // Local buffers for readings sensors, populated in run
+    yarp::os::Mutex m_sensorReadingsMutex;
+    std::atomic<bool> m_sensorsReadingsAvailable;
+    std::vector<double> m_jointPositionsFromYARPInDeg;
+    std::vector<double> m_jointVelocitiesFromYARPInDegPerSec;
     std::vector<double> m_jointTorquesFromYARP;
+
+    // Local buffers for sending desired values, populated in onDesiredMessageReceived
+    std::vector<double> m_desiredTorques;
+    std::vector<int> m_measuredControlModes;
+    std::vector<int> m_controlModeTorque;
+    std::vector<int> m_controlModePosition;
+
 
     // FastRTPS robot feedback message
     it::iit::yarp::RobotFeedback m_robotFeedback;
-    it::iit::yarp::RobotDesireds m_robotDesired;
-
-    // Function to call when a new desired message has been received
-    // TODO(traversaro): make sure that this function is called
-    void onDesiredMessageReceived(const it::iit::yarp::RobotDesireds& receivedRobotDesired);
-
-    // Local buffers for sending desired values
-    std::vector<double> m_desiredTorques;
+    eprosima::fastcdr::FastBuffer m_feedbackBuffer;
 
     // Variables for i/o communication
     asio::io_service * m_feedbackService;
-    asio::io_service * m_desiredService;
 
-    // Creating sockets and endpoints
+    // Sockets and endpoints
     asio::ip::udp::socket * m_feedbackSocket;
-    asio::ip::udp::socket * m_desiredSocket;
     asio::ip::udp::endpoint m_feedbackEndpoint;
-    asio::ip::udp::endpoint m_desiredEndpoint;
 
-    // FastCDR buffer for serialization
-    eprosima::fastcdr::FastBuffer m_feedbackBuffer;
-    eprosima::fastcdr::FastBuffer m_desiredBuffer;
+    // Thread used for listening on incoming desired joint messages
+    BridgeIHMCORSReceiverThread m_receivingThread;
+
+    // Variables to handle the timeout of received messages
+    double m_desiredTimeoutInSeconds;
+    std::atomic<bool> m_controlActive;
+    std::atomic<double> m_lastTimeOfReceivedDesiredMessage;
 
 public:
     // CONSTRUCTOR
@@ -113,6 +149,8 @@ public:
     // RATE THREAD
     virtual void run();
 
+    // Function to call when a new desired message has been received
+    void onDesiredMessageReceived(const it::iit::yarp::RobotDesireds& receivedRobotDesired);
 };
 
 }
