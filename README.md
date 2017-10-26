@@ -30,7 +30,10 @@ make
 ```
 
 ### Configure your system
-To make sure that the `bridge_ihmc_ors` YARP device is found, add the `<install_prefix>` that you choose to the `YARP_DATA_DIRS` env variable.
+To make sure that the `bridge_ihmc_ors` YARP device is found, add the `<install_prefix>/share/yarp` to the `YARP_DATA_DIRS` env variable. To check that the device was correctly found by YARP, you should find this line if you run the command `yarpdev --list`: 
+~~~
+[INFO]Device "bridge_ihmc_ors", available on request (found in <install_prefix>/lib/yarp/bridge_ihmc_ors.so library).
+~~~
 
 ## Usage
 
