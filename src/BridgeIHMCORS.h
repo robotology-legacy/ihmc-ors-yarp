@@ -5,6 +5,10 @@
 #ifndef YARP_BRIDGE_IHMC_ORS_H
 #define YARP_BRIDGE_IHMC_ORS_H
 
+// Standard libraries includes 
+#include <atomic>
+#include <vector>
+
 // YARP includes
 #include <yarp/os/Mutex.h>
 #include <yarp/os/Thread.h>
