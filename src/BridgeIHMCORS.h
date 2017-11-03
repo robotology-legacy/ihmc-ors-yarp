@@ -7,6 +7,7 @@
 
 // Standard libraries includes 
 #include <atomic>
+#include <mutex>
 #include <vector>
 
 // YARP includes
@@ -107,7 +108,7 @@ private:
     std::vector<yarp::dev::JointTypeEnum> m_jointTypes;
 
     // Local buffers for readings sensors, populated in run
-    yarp::os::Mutex m_sensorReadingsMutex;
+    std::mutex m_sensorReadingsMutex;
     std::atomic<bool> m_sensorsReadingsAvailable;
     std::vector<double> m_jointPositionsFromYARPInDeg;
     std::vector<double> m_jointVelocitiesFromYARPInDegPerSec;
