@@ -33,9 +33,10 @@ using namespace eprosima::fastcdr::exception;
 
 #include <utility>
 
+
 it::iit::yarp::JointDesired::JointDesired()
 {
-    m_enabled = false;
+    m_controlMode = it::iit::yarp::NOT_ENABLED;
     m_tau = 0.0;
     m_kp = 0.0;
     m_kd = 0.0;
@@ -49,7 +50,7 @@ it::iit::yarp::JointDesired::~JointDesired()
 
 it::iit::yarp::JointDesired::JointDesired(const JointDesired &x)
 {
-    m_enabled = x.m_enabled;
+    m_controlMode = x.m_controlMode;
     m_tau = x.m_tau;
     m_kp = x.m_kp;
     m_kd = x.m_kd;
@@ -59,7 +60,7 @@ it::iit::yarp::JointDesired::JointDesired(const JointDesired &x)
 
 it::iit::yarp::JointDesired::JointDesired(JointDesired &&x)
 {
-    m_enabled = x.m_enabled;
+    m_controlMode = x.m_controlMode;
     m_tau = x.m_tau;
     m_kp = x.m_kp;
     m_kd = x.m_kd;
@@ -69,7 +70,7 @@ it::iit::yarp::JointDesired::JointDesired(JointDesired &&x)
 
 it::iit::yarp::JointDesired& it::iit::yarp::JointDesired::operator=(const JointDesired &x)
 {
-    m_enabled = x.m_enabled;
+    m_controlMode = x.m_controlMode;
     m_tau = x.m_tau;
     m_kp = x.m_kp;
     m_kd = x.m_kd;
@@ -81,7 +82,7 @@ it::iit::yarp::JointDesired& it::iit::yarp::JointDesired::operator=(const JointD
 
 it::iit::yarp::JointDesired& it::iit::yarp::JointDesired::operator=(JointDesired &&x)
 {
-    m_enabled = x.m_enabled;
+    m_controlMode = x.m_controlMode;
     m_tau = x.m_tau;
     m_kp = x.m_kp;
     m_kd = x.m_kd;
@@ -95,7 +96,7 @@ size_t it::iit::yarp::JointDesired::getMaxCdrSerializedSize(size_t current_align
 {
     size_t initial_alignment = current_alignment;
             
-    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
     current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
 
@@ -115,7 +116,7 @@ size_t it::iit::yarp::JointDesired::getCdrSerializedSize(const it::iit::yarp::Jo
 {
     size_t initial_alignment = current_alignment;
             
-    current_alignment += 1 + eprosima::fastcdr::Cdr::alignment(current_alignment, 1);
+    current_alignment += 4 + eprosima::fastcdr::Cdr::alignment(current_alignment, 4);
 
     current_alignment += 8 + eprosima::fastcdr::Cdr::alignment(current_alignment, 8);
 
@@ -133,7 +134,7 @@ size_t it::iit::yarp::JointDesired::getCdrSerializedSize(const it::iit::yarp::Jo
 
 void it::iit::yarp::JointDesired::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
-    scdr << m_enabled;
+    scdr << (uint32_t)m_controlMode;
     scdr << m_tau;
     scdr << m_kp;
     scdr << m_kd;
@@ -143,7 +144,7 @@ void it::iit::yarp::JointDesired::serialize(eprosima::fastcdr::Cdr &scdr) const
 
 void it::iit::yarp::JointDesired::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
-    dcdr >> m_enabled;
+    dcdr >> (uint32_t&)m_controlMode;
     dcdr >> m_tau;
     dcdr >> m_kp;
     dcdr >> m_kd;

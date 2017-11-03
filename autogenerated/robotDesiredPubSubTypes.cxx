@@ -31,6 +31,7 @@ namespace it
     {
         namespace yarp
         {
+
             JointDesiredPubSubType::JointDesiredPubSubType() {
                 setName("it::iit::yarp::JointDesired");
                 m_typeSize = (uint32_t)JointDesired::getMaxCdrSerializedSize() + 4 /*encapsulation*/;

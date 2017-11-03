@@ -68,6 +68,16 @@ namespace it
         namespace yarp
         {
             /*!
+             * @brief This class represents the enumeration ORSControlMode defined by the user in the IDL file.
+             * @ingroup ROBOTDESIRED
+             */
+            enum ORSControlMode : uint32_t
+            {
+                NOT_ENABLED,
+                POSITION_CONTROL,
+                TORQUE_CONTROL
+            };
+            /*!
              * @brief This class represents the structure JointDesired defined by the user in the IDL file.
              * @ingroup ROBOTDESIRED
              */
@@ -110,30 +120,30 @@ namespace it
                 eProsima_user_DllExport JointDesired& operator=(JointDesired &&x);
                 
                 /*!
-                 * @brief This function sets a value in member enabled
-                 * @param _enabled New value for member enabled
+                 * @brief This function sets a value in member controlMode
+                 * @param _controlMode New value for member controlMode
                  */
-                inline eProsima_user_DllExport void enabled(bool _enabled)
+                inline eProsima_user_DllExport void controlMode(it::iit::yarp::ORSControlMode _controlMode)
                 {
-                    m_enabled = _enabled;
+                    m_controlMode = _controlMode;
                 }
 
                 /*!
-                 * @brief This function returns the value of member enabled
-                 * @return Value of member enabled
+                 * @brief This function returns the value of member controlMode
+                 * @return Value of member controlMode
                  */
-                inline eProsima_user_DllExport bool enabled() const
+                inline eProsima_user_DllExport it::iit::yarp::ORSControlMode controlMode() const
                 {
-                    return m_enabled;
+                    return m_controlMode;
                 }
 
                 /*!
-                 * @brief This function returns a reference to member enabled
-                 * @return Reference to member enabled
+                 * @brief This function returns a reference to member controlMode
+                 * @return Reference to member controlMode
                  */
-                inline eProsima_user_DllExport bool& enabled()
+                inline eProsima_user_DllExport it::iit::yarp::ORSControlMode& controlMode()
                 {
-                    return m_enabled;
+                    return m_controlMode;
                 }
                 /*!
                  * @brief This function sets a value in member tau
@@ -317,7 +327,7 @@ namespace it
                 eProsima_user_DllExport void serializeKey(eprosima::fastcdr::Cdr &cdr) const;
                 
             private:
-                bool m_enabled;
+                it::iit::yarp::ORSControlMode m_controlMode;
                 double m_tau;
                 double m_kp;
                 double m_kd;
