@@ -1,0 +1,50 @@
+sudo: required
+dist: trusty
+language: cpp
+cache: ccache
+
+compiler:
+  - gcc
+  - clang
+
+env:
+  - TRAVIS_BUILD_TYPE=Debug, TRAVIS_CMAKE_GENERATOR="Unix Makefiles",
+  - TRAVIS_BUILD_TYPE=Release, TRAVIS_CMAKE_GENERATOR="Unix Makefiles",
+
+before_script:
+  - cd ..
+  # Install system dependencies 
+  sudo apt install libasio-dev libace-dev
+  # Install dependencies from source code  
+  ## YARP
+  - git clone https://github.com/robotology/yarp
+  - cd yarp
+  - mkdir build
+  - cd build
+  - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE} ..
+  - cmake --build . --config ${TRAVIS_BUILD_TYPE}
+  - cmake --build . --config ${TRAVIS_BUILD_TYPE} --target INSTALL
+  - cd ../..
+  ## fastcdr 
+  - git clone https://github.com/eProsima/Fast-CDR
+  - cd Fast-CDR
+  - mkdir build
+  - cd build
+  - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE} ..
+  - cmake --build . --config ${TRAVIS_BUILD_TYPE}
+  - cmake --build . --config ${TRAVIS_BUILD_TYPE} --target INSTALL
+  - cd ../..
+  ## 
+  - cd ihmc-ors-yarp
+
+script:
+  - mkdir build
+  - cd build
+  - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE}  ..
+  - cmake --build . --config ${TRAVIS_BUILD_TYPE}
+  - cmake --build . --config ${TRAVIS_BUILD_TYPE} --target INSTALL
+
+notifications:
+  email:
+    - pegua1@gmail.com
+    - gabriele.nava@iit.it
