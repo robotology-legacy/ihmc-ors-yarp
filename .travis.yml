@@ -14,7 +14,7 @@ env:
 before_script:
   - cd ..
   # Install system dependencies 
-  sudo apt install libasio-dev libace-dev
+  - sudo apt install libasio-dev libace-dev
   # Install dependencies from source code  
   ## YARP
   - git clone https://github.com/robotology/yarp
