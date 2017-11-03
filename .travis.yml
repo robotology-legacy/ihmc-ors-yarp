@@ -23,7 +23,7 @@ before_script:
   - cd build
   - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE} ..
   - cmake --build . --config ${TRAVIS_BUILD_TYPE}
-  - cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
+  - sudo cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
   - cd ../..
   ## fastcdr 
   - git clone https://github.com/eProsima/Fast-CDR
@@ -32,7 +32,7 @@ before_script:
   - cd build
   - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE} ..
   - cmake --build . --config ${TRAVIS_BUILD_TYPE}
-  - cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
+  - sudo cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
   - cd ../..
   ## 
   - cd ihmc-ors-yarp
@@ -42,7 +42,7 @@ script:
   - cd build
   - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE}  ..
   - cmake --build . --config ${TRAVIS_BUILD_TYPE}
-  - cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
+  - sudo cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
 
 notifications:
   email:
