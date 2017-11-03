@@ -11,7 +11,6 @@
 #include <vector>
 
 // YARP includes
-#include <yarp/os/Mutex.h>
 #include <yarp/os/Thread.h>
 #include <yarp/os/RateThread.h>
 
