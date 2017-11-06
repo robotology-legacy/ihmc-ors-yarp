@@ -109,7 +109,7 @@ option(BUILD_TESTING "Create tests using CMake" OFF)
 if(BUILD_TESTING)
   include(CTest)
   enable_testing()
-  # add_subdirectory(tests)
+  add_subdirectory(tests)
 endif()
 
 # Add the "uninstall" target

@@ -53,6 +53,8 @@
          <param name="period">0.005</param>
          <param name="feedback-address">localhost</param>
          <param name="desired-address">localhost</param>
+         <!-- For testing we use a big timeout -->
+         <param name="desired-timeout">30.0</param>
 
          <action phase="startup" level="20" type="attach">
             <paramlist name="networks">

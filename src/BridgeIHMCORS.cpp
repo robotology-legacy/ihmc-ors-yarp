@@ -14,6 +14,8 @@
 #include <climits>
 #include <cmath>
 
+
+
 namespace yarp
 {
 namespace dev
@@ -191,6 +193,7 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             bool ok = p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.trqs);
             ok = ok && p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.axis);
             ok = ok && p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.ctrlMode);
+            ok = ok && p[devIdx]->poly->view(m_wholeBodyControlBoardInterfaces.posdir);
 
             // Read number of joints to resize buffers
             int nj=0;
@@ -213,7 +216,6 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             m_measuredControlModes.resize(nj);
             m_controlModeTorque.resize(nj, VOCAB_CM_TORQUE);
             m_controlModePosition.resize(nj, VOCAB_CM_POSITION);
-            m_desiredTorques.resize(nj);
 
             // Resize buffers
             m_robotFeedback.jointStates().resize(nj);
@@ -224,9 +226,28 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             // Resize FastCDR feedback buffer to the size of m_robotFeedback
             m_feedbackBuffer.resize(m_robotFeedback.getCdrSerializedSize(m_robotFeedback));
 
-
             // Resize the internal buffers of the receiving thread
             m_receivingThread.resize(nj);
+
+            // Resize control mode
+            m_jointORSControlModeMutex.lock();
+            m_jointORSControlMode.resize(nj);
+            for(int jnt=0; jnt < nj; jnt++)
+            {
+                m_jointORSControlMode[jnt] = it::iit::yarp::NOT_ENABLED;
+            }
+            m_jointORSControlModeMutex.unlock();
+
+            // Reserve this buffers (they are actually filled only if necessary)
+            m_desiredControlModesJnt.reserve(nj);
+            m_desiredControlModes.reserve(nj);
+            m_desTorquesJnt.reserve(nj);
+            m_desTorques.reserve(nj);
+            m_desPosJnt.reserve(nj);
+            m_desPos.reserve(nj);
+            m_desiredControlModesJntForTimeout.reserve(nj);
+            m_desiredControlModesForTimeout.reserve(nj);
+
 
             foundDevice = ok;
             break; // see assumption
@@ -294,16 +315,45 @@ void BridgeIHMCORS::run()
         yWarning() << "BridgeIHMCORS: some sensor were not read correctly";
     }
 
-    // Handle timeout of desired messages
-    if (m_controlActive)
+    // Handle timeout of desired messages, if there are any enabled joints
+    bool areSomeJointsEnabled = false;
+    m_desiredControlModesJntForTimeout.resize(0);
+    m_desiredControlModesForTimeout.resize(0);
+    m_jointORSControlModeMutex.lock();
+    for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
+    {
+        if (m_jointORSControlMode[jnt] != it::iit::yarp::NOT_ENABLED)
+        {
+            areSomeJointsEnabled = true;
+            m_desiredControlModesJntForTimeout.push_back(jnt);
+            m_desiredControlModesForTimeout.push_back(VOCAB_CM_POSITION);
+        }
+    }
+    m_jointORSControlModeMutex.unlock();
+
+    if (areSomeJointsEnabled)
     {
         double timeSinceLastFeedback = yarp::os::Time::now()-m_lastTimeOfReceivedDesiredMessage;
 
         if (timeSinceLastFeedback > m_desiredTimeoutInSeconds)
         {
-            m_controlActive = false;
-            m_wholeBodyControlBoardInterfaces.ctrlMode->setControlModes(m_controlModePosition.data());
-            yInfo("BridgeIHMCORS: %lf seconds passed without receiving a message from the IHMC-ORS controller, switching back the robot to position mode.", timeSinceLastFeedback);
+            m_jointORSControlModeMutex.lock();
+            for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
+            {
+                if (m_jointORSControlMode[jnt] != it::iit::yarp::NOT_ENABLED)
+                {
+                    m_desiredControlModesJntForTimeout.push_back(jnt);
+                    m_desiredControlModesForTimeout.push_back(VOCAB_CM_POSITION);
+                    m_jointORSControlMode[jnt] = it::iit::yarp::NOT_ENABLED;
+                }
+            }
+            m_jointORSControlModeMutex.unlock();
+
+            // Warning: this is a blocking call, check if it is problematic
+            m_wholeBodyControlBoardInterfaces.ctrlMode->setControlModes(m_desiredControlModesJntForTimeout.size(),
+                                                                        m_desiredControlModesJntForTimeout.data(),
+                                                                        m_desiredControlModesForTimeout.data());
+            yInfo("BridgeIHMCORS: %lf seconds passed without receiving a message from the IHMC-ORS controller, switching controlled joints back to position mode.", timeSinceLastFeedback);
         }
     }
 }
@@ -347,7 +397,7 @@ void BridgeIHMCORS::resetInterfaces()
     m_wholeBodyControlBoardInterfaces.trqs = nullptr;
     m_wholeBodyControlBoardInterfaces.axis = nullptr;
     m_wholeBodyControlBoardInterfaces.ctrlMode = nullptr;
-    m_controlActive = false;
+    m_wholeBodyControlBoardInterfaces.posdir = nullptr;
     m_sensorsReadingsAvailable = false;
 }
 
@@ -367,39 +417,106 @@ void BridgeIHMCORS::onDesiredMessageReceived(const it::iit::yarp::RobotDesireds&
 
     // Handle control mode
 
-    // Reading the control mode is fast
+    // Reading the control mode is fast, so there is no problem in reading them
     bool needToSetControlModeToTorque = false;
     m_wholeBodyControlBoardInterfaces.ctrlMode->getControlModes(m_measuredControlModes.data());
+
+    // We check the actual control mode of each joint and save the one that need to be changed
+    // Note: a single call to setControlModes can be quite faster than several calls to setControlMode
+    m_desiredControlModesJnt.resize(0);
+    m_desiredControlModes.resize(0);
+    m_jointORSControlModeMutex.lock();
     for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
     {
-        if (m_measuredControlModes[jnt] != VOCAB_CM_TORQUE)
+        // For each joint, we have three relevant variables
+        // * The YARP controlmode, contained in m_measuredControlModes[jnt]
+        // * The current ORS controlmode, contained in m_jointORSControlMode[jnt]
+        // * The newly requested ORS controlmode, contained in receivedRobotDesired.jointDesireds()[jnt].controlMode
+        // Depending on this variables, a new command is send to YARP or not
+        const it::iit::yarp::JointDesired& jd = receivedRobotDesired.jointDesireds()[jnt];
+
+        if ((m_measuredControlModes[jnt] != VOCAB_CM_TORQUE) && (jd.controlMode() == it::iit::yarp::TORQUE_CONTROL))
         {
-            needToSetControlModeToTorque = true;
+            m_desiredControlModesJnt.push_back(static_cast<int>(jnt));
+            m_desiredControlModes.push_back(VOCAB_CM_TORQUE);
         }
+
+        if ((m_measuredControlModes[jnt] != VOCAB_CM_POSITION_DIRECT) && (jd.controlMode() == it::iit::yarp::POSITION_CONTROL))
+        {
+            m_desiredControlModesJnt.push_back(static_cast<int>(jnt));
+            m_desiredControlModes.push_back(VOCAB_CM_POSITION_DIRECT);
+        }
+
+        // We only set a NOT_ENABLED joint in VOCAB_CM_POSITION mode only if before it was not NOT_ENABLED
+        if ((m_measuredControlModes[jnt] != VOCAB_CM_POSITION) &&
+            (jd.controlMode() == it::iit::yarp::NOT_ENABLED) &&
+            (m_jointORSControlMode[jnt] != it::iit::yarp::NOT_ENABLED))
+        {
+            m_desiredControlModesJnt.push_back(static_cast<int>(jnt));
+            m_desiredControlModes.push_back(VOCAB_CM_POSITION);
+        }
+
+        m_jointORSControlMode[jnt] = jd.controlMode();
     }
+    m_jointORSControlModeMutex.unlock();
 
     // todo(traversaro): check if this blocking call is problematic
-    if (needToSetControlModeToTorque)
+    if (m_desiredControlModesJnt.size() > 0)
     {
-        m_wholeBodyControlBoardInterfaces.ctrlMode->setControlModes(m_controlModeTorque.data());
+        m_wholeBodyControlBoardInterfaces.ctrlMode->setControlModes(m_desiredControlModesJnt.size(),
+                                                                    m_desiredControlModesJnt.data(),
+                                                                    m_desiredControlModes.data());
     }
 
     // Compute desired torques using the IHMC control law
+    // todo(traversaro) this should be moved to a separate thread so it can run at an higher rate w.r.t.
+    //                  when the desired message is received from the IHMC-ORS controller
+    m_desTorquesJnt.resize(0);
+    m_desTorques.resize(0);
+    m_desPosJnt.resize(0);
+    m_desPos.resize(0);
     m_sensorReadingsMutex.lock();
+    m_jointORSControlModeMutex.lock();
     for (size_t jnt=0; jnt < m_jointTypes.size(); jnt++)
     {
-        const it::iit::yarp::JointDesired& jd = receivedRobotDesired.jointDesireds()[jnt];
-        m_desiredTorques[jnt] = jd.tau() +
-                                jd.kp()*( jd.qDesired()  - deg2rad(m_jointPositionsFromYARPInDeg[jnt]) ) +
-                                jd.kd()*( jd.qdDesired() - deg2rad(m_jointVelocitiesFromYARPInDegPerSec[jnt]) );
+        const it::iit::yarp::JointDesired &jd = receivedRobotDesired.jointDesireds()[jnt];
+
+        if (m_jointORSControlMode[jnt] == it::iit::yarp::TORQUE_CONTROL)
+        {
+            double desTorque = jd.tau() +
+                               jd.kp() * (jd.qDesired() - deg2rad(m_jointPositionsFromYARPInDeg[jnt])) +
+                               jd.kd() * (jd.qdDesired() - deg2rad(m_jointVelocitiesFromYARPInDegPerSec[jnt]));
+            m_desTorquesJnt.push_back(static_cast<int>(jnt));
+            m_desTorques.push_back(desTorque);
+        }
+
+        if (m_jointORSControlMode[jnt] == it::iit::yarp::POSITION_CONTROL)
+        {
+            double desPosInDeg  = rad2deg(jd.qDesired());
+            m_desPosJnt.push_back(static_cast<int>(jnt));
+            m_desPos.push_back(desPosInDeg);
+        }
     }
+    m_jointORSControlModeMutex.unlock();
     m_sensorReadingsMutex.unlock();
 
-    // Send desired joint torques
-    m_wholeBodyControlBoardInterfaces.trqs->setRefTorques(m_desiredTorques.data());
+    // Send desired joint torques (if any)
+    if (m_desTorquesJnt.size() > 0)
+    {
+        m_wholeBodyControlBoardInterfaces.trqs->setRefTorques(m_desTorquesJnt.size(),
+                                                              m_desTorquesJnt.data(),
+                                                              m_desTorques.data());
+    }
 
-    // Set the state of the control to active and save the last instant in which the feedback message have been received
-    m_controlActive = true;
+    // Send desired joint positions (if any)
+    if (m_desPosJnt.size() > 0)
+    {
+        m_wholeBodyControlBoardInterfaces.posdir->setPositions(m_desPosJnt.size(),
+                                                               m_desPosJnt.data(),
+                                                               m_desPos.data());
+    }
+
+    // Save the last instant in which the feedback message have been received
     m_lastTimeOfReceivedDesiredMessage = yarp::os::Time::now();
 }
 

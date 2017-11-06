@@ -35,6 +35,7 @@ namespace it
     {
         namespace yarp
         {
+
             /*!
              * @brief This class represents the TopicDataType of the type JointDesired defined by the user in the IDL file.
              * @ingroup ROBOTDESIRED

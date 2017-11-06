@@ -98,14 +98,19 @@ By default, after the start the device send the RobotFeedback message as a UDP d
 on the port `feedback-port-number` (default value: `9970`). A separate threads listen for a UDP datagram containing the RobotDesireds message 
  on the `desired-address` IP address  on the port `desired-port-number` (default value: `9980`)
  
-![state](https://user-images.githubusercontent.com/1857049/32063969-e05ff15c-ba78-11e7-9f20-5cb08d86f54d.png)
+### Joint State Behaviour 
+![state](https://user-images.githubusercontent.com/1857049/32371398-f7be7274-c090-11e7-8bc7-fd539845c8cf.png)
 
-The bridge starts in the OFF state. As soon as it receives a RobotDesireds message, it switches to the ON state. While entering in the ON state, it switches all the YARP control modes of the joint handled by the bridge to `VOCAB_CM_TORQUE`.
+The bridge starts all the joints in the `NOT_ENABLED`  state, and the state of each joint evolve indipendently from the rest of the joints.
+As soon as it receives a RobotDesireds message, it switches the joint in the value specified in the `controlMode` attribute, either `NOT_ENABLED`,
+`POSITION_CONTROL` or `TORQUE_CONTROL`.
+When a joint enters in the `POSITION_CONTROL` state from a different state, the bridge switches its YARP control mode to `VOCAB_CM_POSITION_DIRECT`.
+Similarly when a joint enters in the `TORQUE_CONTROL` state from a different state, the bridge switches its YARP control mode to `VOCAB_CM_TORQUE`.
 
-While the bridge is in the ON state, it sends desired torques based on the control law specified in https://github.com/robotology-playground/ihmc-ors-yarp/issues/3, using data received from the RobotDesireds messages and the feedback received from the robot.  
+When a joint is in the `TORQUE_CONTROL` state, it sends desired torques based on the control law specified in https://github.com/robotology-playground/ihmc-ors-yarp/issues/3, using data received from the RobotDesireds messages and the feedback received from the robot. 
+When a joint is in the `POSITION_CONTROL` state, it sends just the `qDesired` value to the low-level position control loop.
 
-Once more then 0.1 second pass without receiving any RobotDesireds message, the bridge switches back to the OFF state, and it switches back all the joint to the YARP control mode `VOCAB_CM_POSITION`.
-
+Once more then 0.1 second pass without receiving any RobotDesireds message, the bridge switches every joint back to the `NOT_ENABLED` state, and it switches back all the joints that were not already in `NOT_ENABLED` state to the YARP control mode `VOCAB_CM_POSITION`.
 
 ## Regenerate the idl messages
 To regenerate the idl messages, you need to have the `fastrtpsgen` tool on your PATH, that is part

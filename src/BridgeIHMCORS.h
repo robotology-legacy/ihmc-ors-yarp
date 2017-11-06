@@ -7,10 +7,10 @@
 
 // Standard libraries includes 
 #include <atomic>
+#include <mutex>
 #include <vector>
 
 // YARP includes
-#include <yarp/os/Mutex.h>
 #include <yarp/os/Thread.h>
 #include <yarp/os/RateThread.h>
 
@@ -96,6 +96,8 @@ private:
         yarp::dev::ITorqueControl        * trqs;
         yarp::dev::IAxisInfo             * axis;
         yarp::dev::IControlMode2         * ctrlMode;
+        yarp::dev::IPositionDirect       * posdir;
+
     } m_wholeBodyControlBoardInterfaces;
 
     // Helper methods to deal with C++ interfaces
@@ -105,18 +107,24 @@ private:
     std::vector<yarp::dev::JointTypeEnum> m_jointTypes;
 
     // Local buffers for readings sensors, populated in run
-    yarp::os::Mutex m_sensorReadingsMutex;
+    std::mutex m_sensorReadingsMutex;
     std::atomic<bool> m_sensorsReadingsAvailable;
     std::vector<double> m_jointPositionsFromYARPInDeg;
     std::vector<double> m_jointVelocitiesFromYARPInDegPerSec;
     std::vector<double> m_jointTorquesFromYARP;
+    std::vector<int> m_desiredControlModesJntForTimeout;
+    std::vector<int> m_desiredControlModesForTimeout;
 
     // Local buffers for sending desired values, populated in onDesiredMessageReceived
-    std::vector<double> m_desiredTorques;
     std::vector<int> m_measuredControlModes;
     std::vector<int> m_controlModeTorque;
     std::vector<int> m_controlModePosition;
-
+    std::vector<int> m_desiredControlModesJnt;
+    std::vector<int> m_desiredControlModes;
+    std::vector<int> m_desTorquesJnt;
+    std::vector<double> m_desTorques;
+    std::vector<int> m_desPosJnt;
+    std::vector<double> m_desPos;
 
     // FastRTPS robot feedback message
     it::iit::yarp::RobotFeedback m_robotFeedback;
@@ -134,7 +142,8 @@ private:
 
     // Variables to handle the timeout of received messages
     double m_desiredTimeoutInSeconds;
-    std::atomic<bool> m_controlActive;
+    std::vector< it::iit::yarp::ORSControlMode > m_jointORSControlMode;
+    std::mutex m_jointORSControlModeMutex;
     std::atomic<double> m_lastTimeOfReceivedDesiredMessage;
 
 public:

@@ -69,7 +69,8 @@ int main(int argc, char* argv[])
     //Filling the vector of data to be sent to the robot
     for (size_t jnt=0; jnt < nj; jnt++)
     {
-        sender_data.jointDesireds()[jnt].tau() = 1;
+      sender_data.jointDesireds()[jnt].controlMode() = it::iit::yarp::TORQUE_CONTROL;
+      sender_data.jointDesireds()[jnt].tau() = 1;
     }
 
     while(1)

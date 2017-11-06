@@ -4,9 +4,17 @@ module it
     {
         module yarp
         {
+            enum ORSControlMode
+            {
+                NOT_ENABLED,
+                POSITION_CONTROL,
+                TORQUE_CONTROL
+            };
+
+
             struct JointDesired
             {
-                boolean enabled; // Enable/disable joint
+                ORSControlMode controlMode;
                 double tau; //Desired torque
                 double kp; // Desired joint stiffness, can be zero to do only torque control
                 double kd; // Desired joint damping, can be zero to do only torque control

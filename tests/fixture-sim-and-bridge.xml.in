@@ -10,16 +10,15 @@
         <parameters>icub_fixed.world</parameters>
         <node>localhost</node>
     </module>
+    <!--
     <module>
         <name>gzclient</name>
-        <dependencies>
-            <port timeout="10">/icubSim/right_leg/state:o</port>
-        </dependencies>
         <node>localhost</node>
     </module>
+    -->
     <module>
         <name>yarprobotinterface</name>
-        <parameters>--config @CMAKE_SOURCE_DIR@/robots/icubGazeboSim/lauch-bridgeihmcors-sim.xml</parameters>
+        <parameters>--config @CMAKE_SOURCE_DIR@/robots/icubGazeboSim/launch-bridgeihmcors-sim.xml</parameters>
         <dependencies>
             <port timeout="10">/icubSim/right_leg/state:o</port>
         </dependencies>
