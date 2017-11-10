@@ -5,12 +5,8 @@
 #ifndef YARP_BRIDGE_IHMC_ORS_H
 #define YARP_BRIDGE_IHMC_ORS_H
 
-// Standard libraries includes 
-#include <atomic>
-#include <mutex>
-#include <vector>
-
 // YARP includes
+#include <yarp/os/BufferedPort.h>
 #include <yarp/os/Thread.h>
 #include <yarp/os/RateThread.h>
 
@@ -20,6 +16,11 @@
 #include <yarp/dev/Wrapper.h>
 #include <yarp/dev/IAnalogSensor.h>
 #include <yarp/dev/GenericSensorInterfaces.h>
+
+#include <yarp/sig/Vector.h>
+#include <yarp/sig/Matrix.h>
+
+#include <yarp/math/Quaternion.h>
 
 // .idl-generated messages
 #include <robotDesired.h>
@@ -33,7 +34,15 @@
 #include <fastcdr/FastBuffer.h>
 #include <fastcdr/Cdr.h>
 
+// Standard libraries includes
+#include <atomic>
+#include <memory>
+#include <mutex>
+#include <vector>
+
+
 namespace yarp {
+
 namespace dev {
 
 class BridgeIHMCORS;
@@ -100,18 +109,34 @@ private:
 
     } m_wholeBodyControlBoardInterfaces;
 
+    class PortReader;
+    // Ports to read IMU(s)
+    std::vector<std::shared_ptr<PortReader>> m_imuPorts;
+    // Ports to read FTs
+    std::vector<std::shared_ptr<PortReader>> m_ftPorts;
+
+    // Helper method to setup port
+    bool configurePortBasedMeasurements(const std::string& parameter,
+                                        const yarp::os::Searchable& config,
+                                        std::vector<std::vector<double>> &outputBuffer,
+                                        std::vector<std::shared_ptr<PortReader>>& configuredPorts);
+
     // Helper methods to deal with C++ interfaces
     bool attachWholeBodyControlBoard(const PolyDriverList& p);
     void resetInterfaces();
 
+    yarp::math::Quaternion quaternionFromRPY(const yarp::sig::Vector& rpyBuffer) const;
+
     std::vector<yarp::dev::JointTypeEnum> m_jointTypes;
 
-    // Local buffers for readings sensors, populated in run
+    // Local buffers for readings sensors, populated in run or port reading callbacks
     std::mutex m_sensorReadingsMutex;
     std::atomic<bool> m_sensorsReadingsAvailable;
     std::vector<double> m_jointPositionsFromYARPInDeg;
     std::vector<double> m_jointVelocitiesFromYARPInDegPerSec;
     std::vector<double> m_jointTorquesFromYARP;
+    std::vector<std::vector<double>> m_imusReadings;
+    std::vector<std::vector<double>> m_ftsReadings;
     std::vector<int> m_desiredControlModesJntForTimeout;
     std::vector<int> m_desiredControlModesForTimeout;
 
@@ -125,6 +150,9 @@ private:
     std::vector<double> m_desTorques;
     std::vector<int> m_desPosJnt;
     std::vector<double> m_desPos;
+
+    mutable yarp::sig::Vector m_rpyBuffer;
+    mutable yarp::sig::Matrix m_orientationBuffer;
 
     // FastRTPS robot feedback message
     it::iit::yarp::RobotFeedback m_robotFeedback;
