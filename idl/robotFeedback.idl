@@ -28,9 +28,9 @@ module it
 
             struct ForceSensor
             {
-                double Fx;
-                double Fy;
-                double Fz;
+                double fx;
+                double fy;
+                double fz;
                 double tauX;
                 double tauY;
                 double tauZ;
