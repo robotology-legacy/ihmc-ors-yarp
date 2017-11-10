@@ -86,6 +86,15 @@ int main(int argc, char* argv[])
         eprosima::fastcdr::Cdr receiver_data_ser(receiver_buffer);
         receiver_data.deserialize(receiver_data_ser);
         std::cout << "Receving data... " <<  receiver_data.jointStates()[2].q() << std::endl;
+        std::cout << " IMU: " << std::endl
+        << receiver_data.imuStates()[0].xdd() << " "
+        << receiver_data.imuStates()[0].ydd() << " "
+        << receiver_data.imuStates()[0].zdd() << std::endl
+        << receiver_data.imuStates()[0].wx() << " "
+        << receiver_data.imuStates()[0].wy() << " "
+        << receiver_data.imuStates()[0].wz() << std::endl;
+
+
     }
 
   }
