@@ -56,6 +56,15 @@
          <!-- For testing we use a big timeout -->
          <param name="desired-timeout">30.0</param>
 
+         <paramlist name="imus">
+             <elem name="waist_imu">/icubSim/inertial</elem>
+         </paramlist>
+
+         <!-- <paramlist name="fts">
+             <elem name="left_foot">/wholeBodyDynamics/left_leg/cartesianEndEffectorWrench:o</elem>
+             <elem name="right_foot">/wholeBodyDynamics/right_leg/cartesianEndEffectorWrench:o</elem>
+         </paramlist> -->
+
          <action phase="startup" level="20" type="attach">
             <paramlist name="networks">
                 <!-- motorcontrol  -->
