@@ -14,14 +14,14 @@ env:
 before_script:
   - cd ..
   # Install system dependencies 
-  - sudo apt install cmake3 libasio-dev libace-dev 
+  - sudo apt install cmake3 libasio-dev libace-dev libeigen3-dev
   # Install dependencies from source code  
   ## YARP
   - git clone https://github.com/robotology/yarp
   - cd yarp
   - mkdir build
   - cd build
-  - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE} ..
+  - cmake -G"${TRAVIS_CMAKE_GENERATOR}" -DCMAKE_BUILD_TYPE=${TRAVIS_BUILD_TYPE} -DCREATE_LIB_MATH=ON ..
   - cmake --build . --config ${TRAVIS_BUILD_TYPE}
   - sudo cmake --build . --config ${TRAVIS_BUILD_TYPE} --target install
   - cd ../..

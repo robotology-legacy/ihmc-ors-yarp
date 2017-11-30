@@ -651,82 +651,82 @@ namespace it
                 eProsima_user_DllExport ForceSensor& operator=(ForceSensor &&x);
                 
                 /*!
-                 * @brief This function sets a value in member Fx
-                 * @param _Fx New value for member Fx
+                 * @brief This function sets a value in member fx
+                 * @param _fx New value for member fx
                  */
-                inline eProsima_user_DllExport void Fx(double _Fx)
+                inline eProsima_user_DllExport void fx(double _fx)
                 {
-                    m_Fx = _Fx;
+                    m_fx = _fx;
                 }
 
                 /*!
-                 * @brief This function returns the value of member Fx
-                 * @return Value of member Fx
+                 * @brief This function returns the value of member fx
+                 * @return Value of member fx
                  */
-                inline eProsima_user_DllExport double Fx() const
+                inline eProsima_user_DllExport double fx() const
                 {
-                    return m_Fx;
+                    return m_fx;
                 }
 
                 /*!
-                 * @brief This function returns a reference to member Fx
-                 * @return Reference to member Fx
+                 * @brief This function returns a reference to member fx
+                 * @return Reference to member fx
                  */
-                inline eProsima_user_DllExport double& Fx()
+                inline eProsima_user_DllExport double& fx()
                 {
-                    return m_Fx;
+                    return m_fx;
                 }
                 /*!
-                 * @brief This function sets a value in member Fy
-                 * @param _Fy New value for member Fy
+                 * @brief This function sets a value in member fy
+                 * @param _fy New value for member fy
                  */
-                inline eProsima_user_DllExport void Fy(double _Fy)
+                inline eProsima_user_DllExport void fy(double _fy)
                 {
-                    m_Fy = _Fy;
-                }
-
-                /*!
-                 * @brief This function returns the value of member Fy
-                 * @return Value of member Fy
-                 */
-                inline eProsima_user_DllExport double Fy() const
-                {
-                    return m_Fy;
+                    m_fy = _fy;
                 }
 
                 /*!
-                 * @brief This function returns a reference to member Fy
-                 * @return Reference to member Fy
+                 * @brief This function returns the value of member fy
+                 * @return Value of member fy
                  */
-                inline eProsima_user_DllExport double& Fy()
+                inline eProsima_user_DllExport double fy() const
                 {
-                    return m_Fy;
-                }
-                /*!
-                 * @brief This function sets a value in member Fz
-                 * @param _Fz New value for member Fz
-                 */
-                inline eProsima_user_DllExport void Fz(double _Fz)
-                {
-                    m_Fz = _Fz;
+                    return m_fy;
                 }
 
                 /*!
-                 * @brief This function returns the value of member Fz
-                 * @return Value of member Fz
+                 * @brief This function returns a reference to member fy
+                 * @return Reference to member fy
                  */
-                inline eProsima_user_DllExport double Fz() const
+                inline eProsima_user_DllExport double& fy()
                 {
-                    return m_Fz;
+                    return m_fy;
+                }
+                /*!
+                 * @brief This function sets a value in member fz
+                 * @param _fz New value for member fz
+                 */
+                inline eProsima_user_DllExport void fz(double _fz)
+                {
+                    m_fz = _fz;
                 }
 
                 /*!
-                 * @brief This function returns a reference to member Fz
-                 * @return Reference to member Fz
+                 * @brief This function returns the value of member fz
+                 * @return Value of member fz
                  */
-                inline eProsima_user_DllExport double& Fz()
+                inline eProsima_user_DllExport double fz() const
                 {
-                    return m_Fz;
+                    return m_fz;
+                }
+
+                /*!
+                 * @brief This function returns a reference to member fz
+                 * @return Reference to member fz
+                 */
+                inline eProsima_user_DllExport double& fz()
+                {
+                    return m_fz;
                 }
                 /*!
                  * @brief This function sets a value in member tauX
@@ -858,9 +858,9 @@ namespace it
                 eProsima_user_DllExport void serializeKey(eprosima::fastcdr::Cdr &cdr) const;
                 
             private:
-                double m_Fx;
-                double m_Fy;
-                double m_Fz;
+                double m_fx;
+                double m_fy;
+                double m_fz;
                 double m_tauX;
                 double m_tauY;
                 double m_tauZ;

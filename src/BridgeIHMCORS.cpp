@@ -10,16 +10,18 @@
 #include <yarp/os/Time.h>
 #include <yarp/os/Bottle.h>
 
+#include <yarp/math/Math.h>
+
 #include <cassert>
 #include <climits>
 #include <cmath>
-
-
 
 namespace yarp
 {
 namespace dev
 {
+
+//MARK: - Thread implementation
 
 BridgeIHMCORSReceiverThread::BridgeIHMCORSReceiverThread(): m_parentDevice(nullptr),
                                                             m_desiredSocket(nullptr),
@@ -92,6 +94,41 @@ void BridgeIHMCORSReceiverThread::threadRelease()
     m_desiredService = nullptr;
 }
 
+//MARK: - Bridge - PortReader implementation
+
+    class BridgeIHMCORS::PortReader
+    : public yarp::os::TypedReaderCallback<yarp::sig::Vector>
+    {
+    private:
+        std::mutex& m_lock;
+        std::vector<double>& m_outputBuffer;
+        yarp::os::BufferedPort<yarp::sig::Vector> m_port;
+        std::string m_destinationPort;
+
+    public:
+
+        yarp::os::BufferedPort<yarp::sig::Vector>& port() { return m_port; }
+        std::string& destinationPort() { return m_destinationPort; }
+
+        PortReader(std::mutex& mutex, std::vector<double>& outputBuffer)
+        : m_lock(mutex)
+        , m_outputBuffer(outputBuffer)
+        {
+            m_port.useCallback(*this);
+        }
+
+        virtual void onRead(yarp::sig::Vector& newData)
+        {
+            std::lock_guard<std::mutex> guard(m_lock);
+            m_outputBuffer.resize(newData.size()); //hopefully a no-op after the first time
+            std::memcpy(m_outputBuffer.data(), newData.data(), sizeof(double) * m_outputBuffer.size());
+        }
+
+    };
+
+
+//MARK: - Bridge implementation
+
 BridgeIHMCORS::BridgeIHMCORS(): os::RateThread(5), m_feedbackSocket(nullptr)
 {
     resetInterfaces();
@@ -100,6 +137,63 @@ BridgeIHMCORS::BridgeIHMCORS(): os::RateThread(5), m_feedbackSocket(nullptr)
 BridgeIHMCORS::~BridgeIHMCORS()
 {
 
+}
+
+
+bool BridgeIHMCORS::configurePortBasedMeasurements(const std::string& parameter,
+                                                   const yarp::os::Searchable& config,
+                                                   std::vector<std::vector<double>> &outputBuffer,
+                                                   std::vector<std::shared_ptr<PortReader>>& configuredPorts)
+{
+    using namespace yarp::os;
+
+    Bottle& group = config.findGroup(parameter);
+    if (group.isNull()) {
+        yWarning("Group %s not found in configuration", parameter.c_str());
+        return true;
+    }
+
+    // well formed group has two elements:
+    // - 1: group key
+    // - 2: Bottle containing the actual value
+
+    if (group.size() < 2
+        || !group.get(1).isList()
+        || !group.get(1).asList()) {
+        yError("Malformed group for %s: %s", parameter.c_str(), group.toString().c_str());
+    }
+
+    // get the second element
+    Bottle* content = group.get(1).asList();
+
+    // For each element in the group, search for the port name
+    // and configure the port
+    configuredPorts.resize(content->size());
+    outputBuffer.resize(content->size());
+    for (int i = 0; i < content->size(); ++i) {
+        // get the ID
+        std::string elementID = content->get(i).asString();
+        // find the corresponding element
+        std::string portName = config.find(elementID).asString();
+        if (portName.empty()) return false;
+
+        configuredPorts[i] = std::make_shared<PortReader>(m_sensorReadingsMutex, outputBuffer[i]);
+        if (!configuredPorts[i]) {
+            yError("Failed to create Port");
+            return false;
+        }
+
+        // Create unnamed port
+        if (!configuredPorts[i]->port().open("...")) {
+            yError("Failed to open (unnamed) port %s", configuredPorts[i]->port().getName().c_str());
+            return false;
+        }
+
+        // Save connection destination for later (we connect in attach)
+        configuredPorts[i]->destinationPort() = portName;
+    }
+
+    return true;
 }
 
 bool BridgeIHMCORS::open(yarp::os::Searchable& config)
@@ -154,6 +248,26 @@ bool BridgeIHMCORS::open(yarp::os::Searchable& config)
     // Configuring receiving thread
     m_receivingThread.configure(this, config);
 
+    // Configuring reading of IMUs and FTs
+    if (!configurePortBasedMeasurements("imus", config, m_imusReadings, m_imuPorts)) {
+        yError("Failed to configure IMUs readings");
+        return false;
+    }
+    if (!configurePortBasedMeasurements("fts", config, m_ftsReadings, m_ftPorts)) {
+        yError("Failed to configure FTs readings");
+        return false;
+    }
+
+    // resize constant buffers
+    m_orientationBuffer.resize(4, 4);
+    m_orientationBuffer.zero();
+    m_rpyBuffer.resize(3);
+    m_rpyBuffer.zero();
+    m_orientationBuffer = yarp::math::rpy2dcm(m_rpyBuffer);
+
+
+    yInfo("Bridge configured successfully");
+
     return true;
 }
 
@@ -167,10 +281,10 @@ bool BridgeIHMCORS::attachAll(const PolyDriverList& p)
         // If everything is ok, start the threads
 
         // Thread streaming the feedback
-        this->start();
+        ok = ok && this->start();
 
         // Thread receiving the desired values
-        m_receivingThread.start();
+        ok = ok && m_receivingThread.start();
     }
 
     return ok;
@@ -212,6 +326,13 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             m_jointPositionsFromYARPInDeg.resize(nj);
             m_jointVelocitiesFromYARPInDegPerSec.resize(nj);
             m_jointTorquesFromYARP.resize(nj);
+            // Resize buffers for FTs and IMUs
+            for (auto& buffer : m_imusReadings) {
+                buffer.resize(12);
+            }
+            for (auto& buffer : m_ftsReadings) {
+                buffer.resize(6);
+            }
 
             m_measuredControlModes.resize(nj);
             m_controlModeTorque.resize(nj, VOCAB_CM_TORQUE);
@@ -219,9 +340,8 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
 
             // Resize buffers
             m_robotFeedback.jointStates().resize(nj);
-            m_robotFeedback.forceSensors().resize(0);
-            m_robotFeedback.imuStates().resize(0);
-
+            m_robotFeedback.imuStates().resize(m_imusReadings.size());
+            m_robotFeedback.forceSensors().resize(m_ftPorts.size());
 
             // Resize FastCDR feedback buffer to the size of m_robotFeedback
             m_feedbackBuffer.resize(m_robotFeedback.getCdrSerializedSize(m_robotFeedback));
@@ -247,6 +367,29 @@ bool BridgeIHMCORS::attachWholeBodyControlBoard(const PolyDriverList& p)
             m_desPos.reserve(nj);
             m_desiredControlModesJntForTimeout.reserve(nj);
             m_desiredControlModesForTimeout.reserve(nj);
+
+
+            // Connect the ports for IMUs and FTs
+            if (ok)
+            {
+                for (auto& port : m_imuPorts) {
+                    // Connect it to the output port
+                    ok = yarp::os::Network::connect(port->destinationPort(), port->port().getName());
+                    if (!ok) {
+                        yError("Failed to connect %s to %s", port->destinationPort().c_str(), port->port().getName().c_str());
+                        break;
+                    }
+                }
+
+                for (auto& port : m_ftPorts) {
+                    // Connect it to the output port
+                    ok = yarp::os::Network::connect(port->destinationPort(), port->port().getName());
+                    if (!ok) {
+                        yError("Failed to connect %s to %s", port->destinationPort().c_str(), port->port().getName().c_str());
+                        break;
+                    }
+                }
+            }
 
 
             foundDevice = ok;
@@ -301,14 +444,49 @@ void BridgeIHMCORS::run()
                 m_robotFeedback.jointStates()[jnt].qd() = m_jointVelocitiesFromYARPInDegPerSec[jnt];
             }
 
-           m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
-           // std::cerr << "m_robotFeedback message updated " << std::endl;
+            m_robotFeedback.jointStates()[jnt].tau() = m_jointTorquesFromYARP[jnt];
+            // std::cerr << "m_robotFeedback message updated " << std::endl;
         }
 
-       // Serialize m_robotFeedback and send message using udp
-       Cdr robotFeedbackSer(m_feedbackBuffer);
-       m_robotFeedback.serialize(robotFeedbackSer);
-       m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), m_feedbackEndpoint);
+        m_sensorReadingsMutex.lock();
+        // Copying last available IMU
+        for (size_t i = 0; i < m_imusReadings.size(); ++i) {
+            const std::vector<double>& currentSensor = m_imusReadings[i];
+            it::iit::yarp::IMUState& outputData = m_robotFeedback.imuStates()[i];
+            //convert from RPY to quaternion
+            m_rpyBuffer(0) = currentSensor[0];
+            m_rpyBuffer(1) = currentSensor[1];
+            m_rpyBuffer(2) = currentSensor[2];
+            yarp::math::Quaternion quaternion = quaternionFromRPY(m_rpyBuffer);
+            outputData.qs(quaternion.w());
+            outputData.qx(quaternion.x());
+            outputData.qy(quaternion.y());
+            outputData.qz(quaternion.z());
+            outputData.xdd() = currentSensor[3];
+            outputData.ydd() = currentSensor[4];
+            outputData.zdd() = currentSensor[5];
+            outputData.wx() = deg2rad(currentSensor[6]);
+            outputData.wy() = deg2rad(currentSensor[7]);
+            outputData.wz() = deg2rad(currentSensor[8]);
+        }
+
+        // Copying last available FTs
+        for (size_t i = 0; i < m_ftsReadings.size(); ++i) {
+            const std::vector<double>& currentSensor = m_ftsReadings[i];
+            it::iit::yarp::ForceSensor& outputData = m_robotFeedback.forceSensors()[i];
+            outputData.fx() = currentSensor[0];
+            outputData.fy() = currentSensor[1];
+            outputData.fz() = currentSensor[2];
+            outputData.tauX() = currentSensor[3];
+            outputData.tauY() = currentSensor[4];
+            outputData.tauZ() = currentSensor[5];
+        }
+        m_sensorReadingsMutex.unlock();
+
+        // Serialize m_robotFeedback and send message using udp
+        Cdr robotFeedbackSer(m_feedbackBuffer);
+        m_robotFeedback.serialize(robotFeedbackSer);
+        m_feedbackSocket->send_to(asio::buffer(m_feedbackBuffer.getBuffer(), m_feedbackBuffer.getBufferSize()), m_feedbackEndpoint);
     }
     else
     {
@@ -376,6 +554,24 @@ bool BridgeIHMCORS::detachAll()
 
     resetInterfaces();
 
+    // Disconnect the ports for IMUs and FTs
+    for (auto& port : m_imuPorts) {
+        // Connect it to the output port
+        if (!yarp::os::Network::disconnect(port->destinationPort(), port->port().getName())) {
+            yError("Failed to disconnect %s to %s", port->destinationPort().c_str(), port->port().getName().c_str());
+            break;
+        }
+    }
+
+    for (auto& port : m_ftPorts) {
+        // Connect it to the output port
+        if (!yarp::os::Network::disconnect(port->destinationPort(), port->port().getName())) {
+            yError("Failed to disconnect %s to %s", port->destinationPort().c_str(), port->port().getName().c_str());
+            break;
+        }
+    }
+
+
     return true;
 }
 
@@ -386,6 +582,16 @@ bool BridgeIHMCORS::close()
         m_feedbackSocket->close();
         delete m_feedbackSocket;
         m_feedbackSocket = nullptr;
+    }
+
+    for (auto& port : m_imuPorts) {
+        port->port().interrupt();
+        port->port().close();
+    }
+
+    for (auto& port : m_ftPorts) {
+        port->port().interrupt();
+        port->port().close();
     }
 
     return true;
@@ -399,6 +605,14 @@ void BridgeIHMCORS::resetInterfaces()
     m_wholeBodyControlBoardInterfaces.ctrlMode = nullptr;
     m_wholeBodyControlBoardInterfaces.posdir = nullptr;
     m_sensorsReadingsAvailable = false;
+}
+
+yarp::math::Quaternion BridgeIHMCORS::quaternionFromRPY(const yarp::sig::Vector& rpyBuffer) const
+{
+    m_orientationBuffer = yarp::math::rpy2dcm(rpyBuffer);
+    yarp::math::Quaternion q;
+    q.fromRotationMatrix(m_orientationBuffer);
+    return q;
 }
 
 void BridgeIHMCORS::onDesiredMessageReceived(const it::iit::yarp::RobotDesireds& receivedRobotDesired)

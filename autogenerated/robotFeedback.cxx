@@ -340,9 +340,9 @@ void it::iit::yarp::IMUState::serializeKey(eprosima::fastcdr::Cdr &scdr) const
 }
 it::iit::yarp::ForceSensor::ForceSensor()
 {
-    m_Fx = 0.0;
-    m_Fy = 0.0;
-    m_Fz = 0.0;
+    m_fx = 0.0;
+    m_fy = 0.0;
+    m_fz = 0.0;
     m_tauX = 0.0;
     m_tauY = 0.0;
     m_tauZ = 0.0;
@@ -354,9 +354,9 @@ it::iit::yarp::ForceSensor::~ForceSensor()
 
 it::iit::yarp::ForceSensor::ForceSensor(const ForceSensor &x)
 {
-    m_Fx = x.m_Fx;
-    m_Fy = x.m_Fy;
-    m_Fz = x.m_Fz;
+    m_fx = x.m_fx;
+    m_fy = x.m_fy;
+    m_fz = x.m_fz;
     m_tauX = x.m_tauX;
     m_tauY = x.m_tauY;
     m_tauZ = x.m_tauZ;
@@ -364,9 +364,9 @@ it::iit::yarp::ForceSensor::ForceSensor(const ForceSensor &x)
 
 it::iit::yarp::ForceSensor::ForceSensor(ForceSensor &&x)
 {
-    m_Fx = x.m_Fx;
-    m_Fy = x.m_Fy;
-    m_Fz = x.m_Fz;
+    m_fx = x.m_fx;
+    m_fy = x.m_fy;
+    m_fz = x.m_fz;
     m_tauX = x.m_tauX;
     m_tauY = x.m_tauY;
     m_tauZ = x.m_tauZ;
@@ -374,9 +374,9 @@ it::iit::yarp::ForceSensor::ForceSensor(ForceSensor &&x)
 
 it::iit::yarp::ForceSensor& it::iit::yarp::ForceSensor::operator=(const ForceSensor &x)
 {
-    m_Fx = x.m_Fx;
-    m_Fy = x.m_Fy;
-    m_Fz = x.m_Fz;
+    m_fx = x.m_fx;
+    m_fy = x.m_fy;
+    m_fz = x.m_fz;
     m_tauX = x.m_tauX;
     m_tauY = x.m_tauY;
     m_tauZ = x.m_tauZ;
@@ -386,9 +386,9 @@ it::iit::yarp::ForceSensor& it::iit::yarp::ForceSensor::operator=(const ForceSen
 
 it::iit::yarp::ForceSensor& it::iit::yarp::ForceSensor::operator=(ForceSensor &&x)
 {
-    m_Fx = x.m_Fx;
-    m_Fy = x.m_Fy;
-    m_Fz = x.m_Fz;
+    m_fx = x.m_fx;
+    m_fy = x.m_fy;
+    m_fz = x.m_fz;
     m_tauX = x.m_tauX;
     m_tauY = x.m_tauY;
     m_tauZ = x.m_tauZ;
@@ -438,9 +438,9 @@ size_t it::iit::yarp::ForceSensor::getCdrSerializedSize(const it::iit::yarp::For
 
 void it::iit::yarp::ForceSensor::serialize(eprosima::fastcdr::Cdr &scdr) const
 {
-    scdr << m_Fx;
-    scdr << m_Fy;
-    scdr << m_Fz;
+    scdr << m_fx;
+    scdr << m_fy;
+    scdr << m_fz;
     scdr << m_tauX;
     scdr << m_tauY;
     scdr << m_tauZ;
@@ -448,9 +448,9 @@ void it::iit::yarp::ForceSensor::serialize(eprosima::fastcdr::Cdr &scdr) const
 
 void it::iit::yarp::ForceSensor::deserialize(eprosima::fastcdr::Cdr &dcdr)
 {
-    dcdr >> m_Fx;
-    dcdr >> m_Fy;
-    dcdr >> m_Fz;
+    dcdr >> m_fx;
+    dcdr >> m_fy;
+    dcdr >> m_fz;
     dcdr >> m_tauX;
     dcdr >> m_tauY;
     dcdr >> m_tauZ;
