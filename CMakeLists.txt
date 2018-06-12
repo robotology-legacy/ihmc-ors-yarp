@@ -7,7 +7,11 @@ project(ihmc-ors-yarp)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Find YARP
-find_package(YARP 2.3.70 REQUIRED)
+set(YARP_REQUIRED_VERSION 2.3.70)
+find_package(YARP REQUIRED)
+if(${YARP_VERSION} VERSION_LESS ${YARP_REQUIRED_VERSION})
+  message(FATAL_ERROR "YARP version ${YARP_VERSION} not sufficient, at least version ${YARP_REQUIRED_VERSION} is required.")
+endif()
 
 if (NOT YARP_HAS_MATH_LIB)
   message(FATAL_ERROR "YARP was found, but no libYARP_math was detected, please recompile yarp")
